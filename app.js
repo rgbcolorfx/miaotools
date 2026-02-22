@@ -1,6 +1,10 @@
 const dom = {
   overviewPage: document.getElementById("overviewPage"),
   detailPage: document.getElementById("detailPage"),
+  brandTitle: document.getElementById("brandTitle"),
+  langLabel: document.getElementById("langLabel"),
+  langSelect: document.getElementById("langSelect"),
+  visitCount: document.getElementById("visitCount"),
   searchInput: document.getElementById("searchInput"),
   clearSearch: document.getElementById("clearSearch"),
   categoryChips: document.getElementById("categoryChips"),
@@ -14,10 +18,217 @@ const dom = {
   toolCardTemplate: document.getElementById("toolCardTemplate"),
 };
 
+const LANG_STORAGE_KEY = "miaotools_lang_v1";
+function getInitialLang() {
+  const saved = localStorage.getItem(LANG_STORAGE_KEY);
+  if (saved === "en" || saved === "zh" || saved === "ja" || saved === "ko" || saved === "ru") return saved;
+  return "en";
+}
+
 const state = {
   query: "",
   category: "全部",
+  lang: getInitialLang(),
+  visitCount: null,
 };
+
+const I18N = {
+  en: {
+    brand: "MiaoTools",
+    pageTitle: "MiaoTools - Online Toolbox",
+    language: "Language",
+    searchPlaceholder: "Search tools, e.g. compound, JSON, timestamp",
+    clear: "Clear",
+    backToList: "Back to directory",
+    all: "All",
+    toolsCount: (n) => `${n} tools`,
+    noMatch: "No matching tools. Try a different keyword.",
+    visits: (n) => `Total visits: ${n}`,
+    visitsNA: "Total visits: N/A",
+  },
+  zh: {
+    brand: "MiaoTools / 秒用工具箱",
+    pageTitle: "秒用工具箱 MiaoTools - 在线工具目录",
+    language: "语言",
+    searchPlaceholder: "搜索工具，例如：复利、JSON、时间戳",
+    clear: "清空",
+    backToList: "返回工具目录",
+    all: "全部",
+    toolsCount: (n) => `共 ${n} 个工具`,
+    noMatch: "没有匹配的工具，请换个关键词。",
+    visits: (n) => `累计访问: ${n}`,
+    visitsNA: "累计访问: 暂不可用",
+  },
+  ja: {
+    brand: "MiaoTools",
+    pageTitle: "MiaoTools - オンラインツール集",
+    language: "言語",
+    searchPlaceholder: "ツールを検索（例: JSON, timestamp, QR）",
+    clear: "クリア",
+    backToList: "一覧へ戻る",
+    all: "すべて",
+    toolsCount: (n) => `${n} tools`,
+    noMatch: "一致するツールがありません。別のキーワードを試してください。",
+    visits: (n) => `累計アクセス: ${n}`,
+    visitsNA: "累計アクセス: N/A",
+  },
+  ko: {
+    brand: "MiaoTools",
+    pageTitle: "MiaoTools - 온라인 툴박스",
+    language: "언어",
+    searchPlaceholder: "도구 검색 (예: JSON, timestamp, QR)",
+    clear: "지우기",
+    backToList: "목록으로 돌아가기",
+    all: "전체",
+    toolsCount: (n) => `${n} tools`,
+    noMatch: "일치하는 도구가 없습니다. 다른 키워드를 시도하세요.",
+    visits: (n) => `총 방문: ${n}`,
+    visitsNA: "총 방문: N/A",
+  },
+  ru: {
+    brand: "MiaoTools",
+    pageTitle: "MiaoTools - Онлайн набор инструментов",
+    language: "Язык",
+    searchPlaceholder: "Поиск инструмента (например: JSON, timestamp, QR)",
+    clear: "Очистить",
+    backToList: "Назад к списку",
+    all: "Все",
+    toolsCount: (n) => `${n} tools`,
+    noMatch: "Совпадений не найдено. Попробуйте другое слово.",
+    visits: (n) => `Всего посещений: ${n}`,
+    visitsNA: "Всего посещений: N/A",
+  },
+};
+
+const CATEGORY_I18N = {
+  en: {
+    金融理财: "Finance",
+    开发工具: "Developer",
+    安全工具: "Security",
+    AI工具: "AI",
+    设计工具: "Design",
+    图像工具: "Image",
+    文档与媒体: "Docs & Media",
+    可视化: "Visualization",
+    编码与数据: "Encoding & Data",
+    文本处理: "Text",
+    时间与随机: "Time & Random",
+    单位转换: "Converters",
+    生活计算: "Daily Calculators",
+  },
+  ja: {
+    金融理财: "ファイナンス",
+    开发工具: "開発ツール",
+    安全工具: "セキュリティ",
+    AI工具: "AIツール",
+    设计工具: "デザイン",
+    图像工具: "画像",
+    文档与媒体: "ドキュメント・メディア",
+    可视化: "可視化",
+    编码与数据: "エンコード・データ",
+    文本处理: "テキスト",
+    时间与随机: "時間・ランダム",
+    单位转换: "単位変換",
+    生活计算: "日常計算",
+  },
+  ko: {
+    金融理财: "금융",
+    开发工具: "개발 도구",
+    安全工具: "보안",
+    AI工具: "AI 도구",
+    设计工具: "디자인",
+    图像工具: "이미지",
+    文档与媒体: "문서/미디어",
+    可视化: "시각화",
+    编码与数据: "인코딩/데이터",
+    文本处理: "텍스트",
+    时间与随机: "시간/랜덤",
+    单位转换: "단위 변환",
+    生活计算: "생활 계산",
+  },
+  ru: {
+    金融理财: "Финансы",
+    开发工具: "Разработка",
+    安全工具: "Безопасность",
+    AI工具: "AI",
+    设计工具: "Дизайн",
+    图像工具: "Изображения",
+    文档与媒体: "Документы и медиа",
+    可视化: "Визуализация",
+    编码与数据: "Кодирование и данные",
+    文本处理: "Текст",
+    时间与随机: "Время и случайное",
+    单位转换: "Конвертеры",
+    生活计算: "Бытовые расчёты",
+  },
+  zh: {},
+};
+
+const TOOL_TEXT_EN = {
+  json: { title: "JSON Formatter / Validator", description: "Format, minify and validate JSON" },
+  base64: { title: "Base64 Encode/Decode", description: "Convert text and Base64" },
+  url: { title: "URL Encode/Decode", description: "Encode and decode URL parameters" },
+  jwt: { title: "JWT Decoder", description: "Decode header/payload and expiry info" },
+  qr: { title: "QR Code Generator", description: "Generate QR code from text or URL" },
+  "img-convert": { title: "Image Convert & Compress", description: "Convert JPG/PNG/WEBP in browser" },
+  "pdf-tools": { title: "PDF Merge / Split", description: "Merge files and extract pages in browser" },
+};
+
+function t(key, ...args) {
+  const dict = I18N[state.lang] || I18N.en;
+  const v = dict[key];
+  return typeof v === "function" ? v(...args) : v;
+}
+
+function localizeCategory(cat) {
+  if (state.lang === "zh") return cat;
+  return (CATEGORY_I18N[state.lang] && CATEGORY_I18N[state.lang][cat]) || CATEGORY_I18N.en[cat] || cat;
+}
+
+function humanizeToolId(id) {
+  return id
+    .split("-")
+    .map((s) => (s ? s[0].toUpperCase() + s.slice(1) : s))
+    .join(" ");
+}
+
+function localizeToolTitle(tool) {
+  if (state.lang === "zh") return tool.title;
+  if (TOOL_TEXT_EN[tool.id]?.title) return TOOL_TEXT_EN[tool.id].title;
+  return humanizeToolId(tool.id);
+}
+
+function localizeToolDescription(tool) {
+  if (state.lang === "zh") return tool.description;
+  if (TOOL_TEXT_EN[tool.id]?.description) return TOOL_TEXT_EN[tool.id].description;
+  return `Tool for ${localizeToolTitle(tool)}`;
+}
+
+function applyLocale() {
+  dom.brandTitle.textContent = t("brand");
+  dom.langLabel.textContent = t("language");
+  dom.searchInput.placeholder = t("searchPlaceholder");
+  dom.clearSearch.textContent = t("clear");
+  dom.backToList.textContent = t("backToList");
+  dom.visitCount.textContent = state.visitCount == null ? t("visitsNA") : t("visits", state.visitCount);
+  dom.langSelect.value = state.lang;
+  document.title = t("pageTitle");
+  const langMap = { zh: "zh-CN", en: "en", ja: "ja", ko: "ko", ru: "ru" };
+  document.documentElement.lang = langMap[state.lang] || "en";
+}
+
+async function initVisitCounter() {
+  try {
+    const ns = `miaotools-${(window.location.hostname || "local").replace(/[^a-zA-Z0-9-]/g, "-")}`;
+    const key = "site-visits";
+    const res = await fetch(`https://api.countapi.xyz/hit/${ns}/${key}`);
+    const data = await res.json();
+    if (typeof data.value === "number") state.visitCount = data.value;
+  } catch {
+    state.visitCount = null;
+  }
+  applyLocale();
+}
 
 function createResultBox(container, className = "result mono") {
   const result = document.createElement("div");
@@ -3950,7 +4161,9 @@ function getFilteredTools() {
     const catOk = state.category === "全部" || t.category === state.category;
     if (!catOk) return false;
     if (!q) return true;
-    return `${t.title} ${t.description} ${t.category}`.toLowerCase().includes(q);
+    return `${t.title} ${t.description} ${t.category} ${localizeToolTitle(t)} ${localizeToolDescription(t)} ${localizeCategory(t.category)}`
+      .toLowerCase()
+      .includes(q);
   });
 }
 
@@ -3968,7 +4181,8 @@ function renderChips(filteredTools) {
   categories.forEach((cat) => {
     const b = document.createElement("button");
     b.className = `chip${cat === state.category ? " active" : ""}`;
-    b.textContent = `${cat} (${counts.get(cat)})`;
+    const label = cat === "全部" ? t("all") : localizeCategory(cat);
+    b.textContent = `${label} (${counts.get(cat)})`;
     b.onclick = () => {
       state.category = cat;
       render();
@@ -3979,7 +4193,7 @@ function renderChips(filteredTools) {
 
 function renderOverview() {
   const filtered = getFilteredTools();
-  dom.resultCount.textContent = `共 ${filtered.length} 个工具`;
+  dom.resultCount.textContent = t("toolsCount", filtered.length);
   renderChips(filtered);
 
   const grouped = new Map();
@@ -3992,7 +4206,7 @@ function renderOverview() {
   if (filtered.length === 0) {
     const empty = document.createElement("div");
     empty.className = "category-block";
-    empty.textContent = "没有匹配的工具，请换个关键词。";
+    empty.textContent = t("noMatch");
     dom.directory.append(empty);
     return;
   }
@@ -4021,9 +4235,9 @@ function renderOverview() {
     const head = document.createElement("div");
     head.className = "category-head";
     const title = document.createElement("h2");
-    title.textContent = cat;
+    title.textContent = localizeCategory(cat);
     const count = document.createElement("span");
-    count.textContent = `${grouped.get(cat).length} 个工具`;
+    count.textContent = t("toolsCount", grouped.get(cat).length);
     head.append(title, count);
 
     const list = document.createElement("div");
@@ -4032,9 +4246,9 @@ function renderOverview() {
     grouped.get(cat).forEach((tool) => {
       const node = dom.toolCardTemplate.content.cloneNode(true);
       const titleNode = node.querySelector("[data-tool-title]");
-      titleNode.textContent = tool.title;
+      titleNode.textContent = localizeToolTitle(tool);
       titleNode.onclick = () => setCurrentTool(tool.id, true);
-      node.querySelector("[data-tool-desc]").textContent = tool.description;
+      node.querySelector("[data-tool-desc]").textContent = localizeToolDescription(tool);
       list.append(node);
     });
 
@@ -4044,9 +4258,9 @@ function renderOverview() {
 }
 
 function renderDetail(tool) {
-  dom.detailCategory.textContent = tool.category;
-  dom.detailTitle.textContent = tool.title;
-  dom.detailDesc.textContent = tool.description;
+  dom.detailCategory.textContent = localizeCategory(tool.category);
+  dom.detailTitle.textContent = localizeToolTitle(tool);
+  dom.detailDesc.textContent = localizeToolDescription(tool);
   dom.detailToolUI.innerHTML = "";
   tool.builder(dom.detailToolUI);
 }
@@ -4079,7 +4293,18 @@ dom.clearSearch.addEventListener("click", () => {
   else render();
 });
 
+dom.langSelect.addEventListener("change", (e) => {
+  const allowed = new Set(["en", "zh", "ja", "ko", "ru"]);
+  const next = allowed.has(e.target.value) ? e.target.value : "en";
+  state.lang = next;
+  localStorage.setItem(LANG_STORAGE_KEY, next);
+  applyLocale();
+  render();
+});
+
 dom.backToList.addEventListener("click", () => setCurrentTool("", true));
 window.addEventListener("popstate", () => render());
 
+applyLocale();
+initVisitCounter();
 render();

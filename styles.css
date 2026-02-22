@@ -42,6 +42,14 @@ body {
   box-shadow: var(--shadow-soft);
 }
 
+.hero__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
 .hero__eyebrow {
   margin: 0;
   font-size: clamp(2rem, 4.8vw, 3.4rem);
@@ -50,6 +58,22 @@ body {
   color: var(--brand);
   font-weight: 800;
   line-height: 1.08;
+}
+
+.hero__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.hero__label {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.hero__select {
+  width: auto;
+  min-width: 124px;
 }
 
 h1 {
@@ -91,6 +115,19 @@ h1 {
   max-width: 1180px;
   margin: 0 auto;
   padding: 0 1.2rem 2.8rem;
+}
+
+.footer {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 1.2rem 1.4rem;
+}
+
+.footer__visit {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-align: center;
 }
 
 .page {
@@ -333,6 +370,11 @@ textarea {
 
   .hero__search {
     flex-wrap: wrap;
+  }
+
+  .hero__controls {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .field-row {
