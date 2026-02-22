@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>秒用工具箱 MiaoTools - 在线工具目录</title>
+    <meta
+      name="description"
+      content="秒用工具箱 MiaoTools：可部署到 GitHub Pages 的在线工具站。首页清晰分类，点击进入单工具页面。"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <div class="hero__inner">
+        <p class="hero__eyebrow">MiaoTools / 秒用工具箱</p>
+        <div class="hero__search">
+          <input id="searchInput" type="search" placeholder="搜索工具，例如：复利、JSON、时间戳" />
+          <button id="clearSearch" class="btn btn--ghost">清空</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="shell">
+      <section id="overviewPage" class="page page--overview">
+        <div class="toolbar">
+          <div id="categoryChips" class="chips"></div>
+          <div id="resultCount" class="result-count"></div>
+        </div>
+        <div id="directory" class="directory"></div>
+      </section>
+
+      <section id="detailPage" class="page page--detail hidden">
+        <div class="detail-head">
+          <button id="backToList" class="btn btn--ghost">返回工具目录</button>
+          <p id="detailCategory" class="detail-category"></p>
+          <h2 id="detailTitle"></h2>
+          <p id="detailDesc" class="detail-desc"></p>
+        </div>
+        <article class="tool-panel">
+          <div id="detailToolUI"></div>
+        </article>
+      </section>
+    </main>
+
+    <template id="toolCardTemplate">
+      <article class="tool-card">
+        <h3 data-tool-title class="tool-card__title"></h3>
+        <p data-tool-desc></p>
+      </article>
+    </template>
+
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>
