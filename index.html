@@ -5,9 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MiaoTools - Online Toolbox</title>
     <meta
+      id="metaDescription"
       name="description"
       content="MiaoTools: static online toolbox deployable to GitHub Pages."
     />
+    <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
+    <meta name="googlebot" content="index,follow" />
+    <meta name="theme-color" content="#0f766e" />
+    <link id="canonicalLink" rel="canonical" href="https://miaotools.top/" />
+
+    <meta id="ogTitle" property="og:title" content="MiaoTools - Online Toolbox" />
+    <meta
+      id="ogDescription"
+      property="og:description"
+      content="MiaoTools: static online toolbox deployable to GitHub Pages."
+    />
+    <meta id="ogUrl" property="og:url" content="https://miaotools.top/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="en_US" />
+
+    <meta name="twitter:card" content="summary" />
+    <meta id="twitterTitle" name="twitter:title" content="MiaoTools - Online Toolbox" />
+    <meta
+      id="twitterDescription"
+      name="twitter:description"
+      content="MiaoTools: static online toolbox deployable to GitHub Pages."
+    />
+
+    <script id="ldWebSite" type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "MiaoTools",
+        "url": "https://miaotools.top/"
+      }
+    </script>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -57,6 +89,10 @@
 
     <footer class="footer">
       <p id="visitCount" class="footer__visit">Total visits: --</p>
+      <div class="footer__seo">
+        <p id="seoLinksLabel" class="footer__seo-label">Tool links for indexing</p>
+        <nav id="seoToolLinks" class="seo-links" aria-label="Tool links"></nav>
+      </div>
     </footer>
 
     <template id="toolCardTemplate">

@@ -5,6 +5,8 @@ const dom = {
   langLabel: document.getElementById("langLabel"),
   langSelect: document.getElementById("langSelect"),
   visitCount: document.getElementById("visitCount"),
+  seoLinksLabel: document.getElementById("seoLinksLabel"),
+  seoToolLinks: document.getElementById("seoToolLinks"),
   searchInput: document.getElementById("searchInput"),
   clearSearch: document.getElementById("clearSearch"),
   categoryChips: document.getElementById("categoryChips"),
@@ -45,6 +47,8 @@ const I18N = {
     noMatch: "No matching tools. Try a different keyword.",
     visits: (n) => `Total visits: ${n}`,
     visitsNA: "Total visits: N/A",
+    seoLinks: "Tool links for indexing",
+    siteDescription: "MiaoTools: static online toolbox deployable to GitHub Pages.",
   },
   zh: {
     brand: "MiaoTools / 秒用工具箱",
@@ -58,6 +62,8 @@ const I18N = {
     noMatch: "没有匹配的工具，请换个关键词。",
     visits: (n) => `累计访问: ${n}`,
     visitsNA: "累计访问: 暂不可用",
+    seoLinks: "工具收录链接",
+    siteDescription: "MiaoTools：可部署到 GitHub Pages 的纯前端在线工具站。",
   },
   ja: {
     brand: "MiaoTools",
@@ -71,6 +77,8 @@ const I18N = {
     noMatch: "一致するツールがありません。別のキーワードを試してください。",
     visits: (n) => `累計アクセス: ${n}`,
     visitsNA: "累計アクセス: N/A",
+    seoLinks: "インデックス用ツールリンク",
+    siteDescription: "MiaoTools: GitHub Pages にデプロイ可能な静的オンラインツール集。",
   },
   ko: {
     brand: "MiaoTools",
@@ -84,6 +92,8 @@ const I18N = {
     noMatch: "일치하는 도구가 없습니다. 다른 키워드를 시도하세요.",
     visits: (n) => `총 방문: ${n}`,
     visitsNA: "총 방문: N/A",
+    seoLinks: "인덱싱용 도구 링크",
+    siteDescription: "MiaoTools: GitHub Pages에 배포 가능한 정적 온라인 도구 모음.",
   },
   ru: {
     brand: "MiaoTools",
@@ -97,6 +107,8 @@ const I18N = {
     noMatch: "Совпадений не найдено. Попробуйте другое слово.",
     visits: (n) => `Всего посещений: ${n}`,
     visitsNA: "Всего посещений: N/A",
+    seoLinks: "Ссылки для индексации",
+    siteDescription: "MiaoTools: статический онлайн-набор инструментов для GitHub Pages.",
   },
 };
 
@@ -207,14 +219,19 @@ function localizeToolDescription(tool) {
 function applyLocale() {
   dom.brandTitle.textContent = t("brand");
   dom.langLabel.textContent = t("language");
+  dom.seoLinksLabel.textContent = t("seoLinks");
   dom.searchInput.placeholder = t("searchPlaceholder");
   dom.clearSearch.textContent = t("clear");
   dom.backToList.textContent = t("backToList");
   dom.visitCount.textContent = state.visitCount == null ? t("visitsNA") : t("visits", state.visitCount);
   dom.langSelect.value = state.lang;
-  document.title = t("pageTitle");
   const langMap = { zh: "zh-CN", en: "en", ja: "ja", ko: "ko", ru: "ru" };
   document.documentElement.lang = langMap[state.lang] || "en";
+  renderSeoLinks();
+}
+
+function getSiteBaseUrl() {
+  return `${window.location.origin}${window.location.pathname}`;
 }
 
 async function initVisitCounter() {
@@ -4141,6 +4158,37 @@ const tools = [
 
 const toolMap = new Map(tools.map((t) => [t.id, t]));
 
+function renderSeoLinks() {
+  dom.seoToolLinks.innerHTML = "";
+  tools.forEach((tool) => {
+    const a = document.createElement("a");
+    a.href = `?tool=${tool.id}`;
+    a.textContent = localizeToolTitle(tool);
+    dom.seoToolLinks.append(a);
+  });
+}
+
+function updateSeo(tool) {
+  const baseTitle = "MiaoTools - Online Toolbox";
+  const siteDesc = t("siteDescription");
+  const pageTitle = tool ? `${localizeToolTitle(tool)} | MiaoTools` : baseTitle;
+  const pageDesc = tool ? localizeToolDescription(tool) : siteDesc;
+  const url = tool ? `${getSiteBaseUrl()}?tool=${encodeURIComponent(tool.id)}` : getSiteBaseUrl();
+
+  document.title = pageTitle;
+  const setMeta = (selector, attr, value) => {
+    const el = document.querySelector(selector);
+    if (el) el.setAttribute(attr, value);
+  };
+  setMeta("#metaDescription", "content", pageDesc);
+  setMeta("#canonicalLink", "href", url);
+  setMeta("#ogTitle", "content", pageTitle);
+  setMeta("#ogDescription", "content", pageDesc);
+  setMeta("#ogUrl", "content", url);
+  setMeta("#twitterTitle", "content", pageTitle);
+  setMeta("#twitterDescription", "content", pageDesc);
+}
+
 function getCurrentToolId() {
   const p = new URLSearchParams(window.location.search);
   return p.get("tool") || "";
@@ -4273,10 +4321,12 @@ function render() {
     dom.overviewPage.classList.add("hidden");
     dom.detailPage.classList.remove("hidden");
     renderDetail(tool);
+    updateSeo(tool);
   } else {
     dom.detailPage.classList.add("hidden");
     dom.overviewPage.classList.remove("hidden");
     renderOverview();
+    updateSeo(null);
   }
 }
 

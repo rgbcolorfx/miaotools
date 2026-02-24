@@ -130,6 +130,37 @@ h1 {
   text-align: center;
 }
 
+.footer__seo {
+  margin-top: 0.7rem;
+  padding-top: 0.7rem;
+  border-top: 1px dashed #d9d4ca;
+}
+
+.footer__seo-label {
+  margin: 0 0 0.45rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.seo-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.55rem;
+  justify-content: center;
+}
+
+.seo-links a {
+  color: #356a65;
+  font-size: 0.76rem;
+  text-decoration: none;
+  border-bottom: 1px dotted #9dc3bd;
+}
+
+.seo-links a:hover {
+  color: var(--brand-2);
+}
+
 .page {
   background: var(--surface);
   border: 1px solid var(--line);
