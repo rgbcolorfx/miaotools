@@ -4534,17 +4534,47 @@ function withTimeout(promise, ms, message) {
   });
 }
 
+async function importWithFallback(urls, timeoutMs = 12000) {
+  let lastErr = null;
+  for (const url of urls) {
+    try {
+      return await withTimeout(import(/* @vite-ignore */ url), timeoutMs, `加载模块超时: ${url}`);
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw lastErr || new Error("模块加载失败");
+}
+
 async function getFfmpegKit() {
   if (!ffmpegKitPromise) {
     ffmpegKitPromise = (async () => {
       const [{ FFmpeg }, { fetchFile, toBlobURL }] = await Promise.all([
-        import("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/index.js"),
-        import("https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/index.js"),
+        importWithFallback([
+          `${window.location.origin}/vendor/ffmpeg/ffmpeg-index.js`,
+          "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/index.js",
+          "https://fastly.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/index.js",
+          "https://unpkg.com/@ffmpeg/ffmpeg@0.12.15/dist/esm/index.js",
+        ]),
+        importWithFallback([
+          `${window.location.origin}/vendor/ffmpeg/ffmpeg-util.js`,
+          "https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/index.js",
+          "https://fastly.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/index.js",
+          "https://unpkg.com/@ffmpeg/util@0.12.2/dist/esm/index.js",
+        ]),
       ]);
       const sources = [
         {
+          coreBase: `${window.location.origin}/vendor/ffmpeg/core`,
+          classWorker: `${window.location.origin}/vendor/ffmpeg/ffmpeg-worker.js`,
+        },
+        {
           coreBase: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm",
           classWorker: "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/worker.js",
+        },
+        {
+          coreBase: "https://fastly.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm",
+          classWorker: "https://fastly.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/worker.js",
         },
         {
           coreBase: "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm",
@@ -4586,7 +4616,7 @@ async function getFfmpegKit() {
           lastErr = err;
         }
       }
-      throw lastErr || new Error("FFmpeg 引擎初始化失败");
+      throw lastErr || new Error("FFmpeg 引擎初始化失败（网络资源不可达）");
     })();
   }
   try {
@@ -4918,7 +4948,13 @@ function buildVideoBrowserOpsTool(container, mode) {
         result.innerHTML = "";
         appendDownloadLink(result, blob, outName, `下载 ${outName}`);
       } catch (err) {
-        result.textContent = `处理失败: ${err.message || err}`;
+        const msg = String(err?.message || err || "");
+        if (/NetworkError|Failed to fetch|fetch resource/i.test(msg)) {
+          result.textContent =
+            "处理失败: 视频引擎资源下载失败（NetworkError）。当前网络可能无法访问外部 CDN，请改用同源静态 ffmpeg 资源后重试。";
+        } else {
+          result.textContent = `处理失败: ${msg}`;
+        }
       }
     })();
   };
