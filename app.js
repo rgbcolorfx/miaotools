@@ -3020,11 +3020,23 @@ function buildFormGenTool(container) {
 }
 
 function b64FromBytes(bytes) {
-  return btoa(String.fromCharCode(...new Uint8Array(bytes)));
+  const arr = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  let bin = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < arr.length; i += chunk) {
+    const part = arr.subarray(i, i + chunk);
+    let s = "";
+    for (let j = 0; j < part.length; j += 1) s += String.fromCharCode(part[j]);
+    bin += s;
+  }
+  return btoa(bin);
 }
 
 function bytesFromB64(b64) {
-  return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  const raw = atob(b64);
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i += 1) out[i] = raw.charCodeAt(i);
+  return out;
 }
 
 function hexToRgbObj(hex) {
