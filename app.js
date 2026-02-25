@@ -4586,21 +4586,22 @@ async function getFfmpegKit() {
       for (const src of sources) {
         const ffmpeg = new FFmpeg();
         try {
-          const coreURL = await withTimeout(
-            toBlobURL(`${src.coreBase}/ffmpeg-core.js`, "text/javascript"),
-            15000,
-            "下载 ffmpeg-core.js 超时",
-          );
-          const wasmURL = await withTimeout(
-            toBlobURL(`${src.coreBase}/ffmpeg-core.wasm`, "application/wasm"),
-            25000,
-            "下载 ffmpeg-core.wasm 超时",
-          );
-          const classWorkerURL = await withTimeout(
-            toBlobURL(src.classWorker, "text/javascript"),
-            15000,
-            "下载 class worker 超时",
-          );
+          const coreRaw = `${src.coreBase}/ffmpeg-core.js`;
+          const wasmRaw = `${src.coreBase}/ffmpeg-core.wasm`;
+          const coreURL = src.coreBase.startsWith(window.location.origin)
+            ? coreRaw
+            : await withTimeout(toBlobURL(coreRaw, "text/javascript"), 15000, "下载 ffmpeg-core.js 超时");
+          const wasmURL = src.coreBase.startsWith(window.location.origin)
+            ? wasmRaw
+            : await withTimeout(toBlobURL(wasmRaw, "application/wasm"), 25000, "下载 ffmpeg-core.wasm 超时");
+          let classWorkerURL = src.classWorker;
+          if (!src.classWorker.startsWith(window.location.origin)) {
+            classWorkerURL = await withTimeout(
+              toBlobURL(src.classWorker, "text/javascript"),
+              15000,
+              "下载 class worker 超时",
+            );
+          }
           await withTimeout(
             ffmpeg.load({ coreURL, wasmURL, classWorkerURL }),
             30000,
