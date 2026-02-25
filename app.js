@@ -2426,7 +2426,16 @@ async function getPdfLib() {
 
 let pdfJsPromise;
 async function getPdfJsLib() {
-  if (!pdfJsPromise) pdfJsPromise = import("https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/+esm");
+  if (!pdfJsPromise) {
+    pdfJsPromise = (async () => {
+      const pdfjs = await import("https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/+esm");
+      if (pdfjs?.GlobalWorkerOptions && !pdfjs.GlobalWorkerOptions.workerSrc) {
+        pdfjs.GlobalWorkerOptions.workerSrc =
+          "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/pdf.worker.min.mjs";
+      }
+      return pdfjs;
+    })();
+  }
   return pdfJsPromise;
 }
 
