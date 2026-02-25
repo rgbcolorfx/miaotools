@@ -1,0 +1,8 @@
+{
+  "name": "miaotools-site",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "vercel-build": "bash scripts/vercel-build.sh"
+  }
+}
