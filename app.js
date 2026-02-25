@@ -4531,7 +4531,10 @@ async function getFfmpegKit() {
       const coreURL = await toBlobURL(`${base}/ffmpeg-core.js`, "text/javascript");
       const wasmURL = await toBlobURL(`${base}/ffmpeg-core.wasm`, "application/wasm");
       const workerURL = await toBlobURL(`${base}/ffmpeg-core.worker.js`, "text/javascript");
-      const classWorkerURL = new URL("ffmpeg-worker-proxy.js", window.location.href).href;
+      const classWorkerURL = await toBlobURL(
+        "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/worker.js",
+        "text/javascript",
+      );
       await ffmpeg.load({ coreURL, wasmURL, workerURL, classWorkerURL });
       return { ffmpeg, fetchFile };
     })();
