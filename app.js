@@ -4519,6 +4519,21 @@ async function loadVideoFromFile(file) {
 }
 
 let ffmpegKitPromise;
+function withTimeout(promise, ms, message) {
+  return new Promise((resolve, reject) => {
+    const id = setTimeout(() => reject(new Error(message)), ms);
+    promise
+      .then((v) => {
+        clearTimeout(id);
+        resolve(v);
+      })
+      .catch((e) => {
+        clearTimeout(id);
+        reject(e);
+      });
+  });
+}
+
 async function getFfmpegKit() {
   if (!ffmpegKitPromise) {
     ffmpegKitPromise = (async () => {
@@ -4526,20 +4541,60 @@ async function getFfmpegKit() {
         import("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/index.js"),
         import("https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/index.js"),
       ]);
-      const ffmpeg = new FFmpeg();
-      const base = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
-      const coreURL = await toBlobURL(`${base}/ffmpeg-core.js`, "text/javascript");
-      const wasmURL = await toBlobURL(`${base}/ffmpeg-core.wasm`, "application/wasm");
-      const workerURL = await toBlobURL(`${base}/ffmpeg-core.worker.js`, "text/javascript");
-      const classWorkerURL = await toBlobURL(
-        "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/worker.js",
-        "text/javascript",
-      );
-      await ffmpeg.load({ coreURL, wasmURL, workerURL, classWorkerURL });
-      return { ffmpeg, fetchFile };
+      const sources = [
+        {
+          coreBase: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm",
+          classWorker: "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/worker.js",
+        },
+        {
+          coreBase: "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm",
+          classWorker: "https://unpkg.com/@ffmpeg/ffmpeg@0.12.15/dist/esm/worker.js",
+        },
+      ];
+
+      let lastErr = null;
+      for (const src of sources) {
+        const ffmpeg = new FFmpeg();
+        try {
+          const coreURL = await withTimeout(
+            toBlobURL(`${src.coreBase}/ffmpeg-core.js`, "text/javascript"),
+            15000,
+            "下载 ffmpeg-core.js 超时",
+          );
+          const wasmURL = await withTimeout(
+            toBlobURL(`${src.coreBase}/ffmpeg-core.wasm`, "application/wasm"),
+            25000,
+            "下载 ffmpeg-core.wasm 超时",
+          );
+          const workerURL = await withTimeout(
+            toBlobURL(`${src.coreBase}/ffmpeg-core.worker.js`, "text/javascript"),
+            15000,
+            "下载 ffmpeg-core.worker.js 超时",
+          );
+          const classWorkerURL = await withTimeout(
+            toBlobURL(src.classWorker, "text/javascript"),
+            15000,
+            "下载 class worker 超时",
+          );
+          await withTimeout(
+            ffmpeg.load({ coreURL, wasmURL, workerURL, classWorkerURL }),
+            30000,
+            "初始化 FFmpeg 引擎超时",
+          );
+          return { ffmpeg, fetchFile };
+        } catch (err) {
+          lastErr = err;
+        }
+      }
+      throw lastErr || new Error("FFmpeg 引擎初始化失败");
     })();
   }
-  return ffmpegKitPromise;
+  try {
+    return await ffmpegKitPromise;
+  } catch (err) {
+    ffmpegKitPromise = null;
+    throw err;
+  }
 }
 
 async function runFfmpegVideoJob(file, outputName, args, onProgress) {
@@ -4743,7 +4798,13 @@ function buildVideoBrowserOpsTool(container, mode) {
             return;
           }
           result.textContent = "初始化视频引擎中...";
+          const initTimer = setTimeout(() => {
+            if (result.textContent.includes("初始化视频引擎中")) {
+              result.textContent = "视频引擎初始化超时：请稍后重试，或切换网络后再试。";
+            }
+          }, 35000);
           const data = await runFfmpegConcatJob(files, "merged.mp4", setProgress);
+          clearTimeout(initTimer);
           const blob = new Blob([data.buffer], { type: "video/mp4" });
           result.innerHTML = "";
           appendDownloadLink(result, blob, "merged.mp4", "下载合并后视频");
@@ -4840,12 +4901,18 @@ function buildVideoBrowserOpsTool(container, mode) {
         }
 
         result.textContent = "初始化视频引擎中...";
+        const initTimer = setTimeout(() => {
+          if (result.textContent.includes("初始化视频引擎中")) {
+            result.textContent = "视频引擎初始化超时：请稍后重试，或切换网络后再试。";
+          }
+        }, 35000);
         const watchdog = setTimeout(() => {
           if (result.textContent.includes("处理中")) {
             result.textContent = "处理时间较长（大文件常见），请继续等待，或改用更小视频测试。";
           }
         }, 20000);
         const data = await runFfmpegVideoJob(f, outName, args, setProgress);
+        clearTimeout(initTimer);
         clearTimeout(watchdog);
         const blob = new Blob([data.buffer], { type: outType });
         result.innerHTML = "";
