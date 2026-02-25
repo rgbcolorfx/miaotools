@@ -122,7 +122,7 @@ const CATEGORY_I18N = {
     图像工具: "Image",
     音频工具: "Audio",
     视频工具: "Video",
-    文档与媒体: "Docs & Media",
+    文档办公: "Docs & Office",
     可视化: "Visualization",
     编码与数据: "Encoding & Data",
     文本处理: "Text",
@@ -139,7 +139,7 @@ const CATEGORY_I18N = {
     图像工具: "画像",
     音频工具: "音声",
     视频工具: "動画",
-    文档与媒体: "ドキュメント・メディア",
+    文档办公: "ドキュメント・オフィス",
     可视化: "可視化",
     编码与数据: "エンコード・データ",
     文本处理: "テキスト",
@@ -156,7 +156,7 @@ const CATEGORY_I18N = {
     图像工具: "이미지",
     音频工具: "오디오",
     视频工具: "비디오",
-    文档与媒体: "문서/미디어",
+    文档办公: "문서/오피스",
     可视化: "시각화",
     编码与数据: "인코딩/데이터",
     文本处理: "텍스트",
@@ -173,7 +173,7 @@ const CATEGORY_I18N = {
     图像工具: "Изображения",
     音频工具: "Аудио",
     视频工具: "Видео",
-    文档与媒体: "Документы и медиа",
+    文档办公: "Документы и офис",
     可视化: "Визуализация",
     编码与数据: "Кодирование и данные",
     文本处理: "Текст",
@@ -2424,6 +2424,12 @@ async function getPdfLib() {
   return pdfLibPromise;
 }
 
+let pdfJsPromise;
+async function getPdfJsLib() {
+  if (!pdfJsPromise) pdfJsPromise = import("https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/+esm");
+  return pdfJsPromise;
+}
+
 function parsePageRanges(input, max) {
   const pages = new Set();
   input
@@ -2518,6 +2524,319 @@ function buildPdfTool(container) {
     a.textContent = `下载提取页 PDF（共 ${pages.length} 页）`;
     result.innerHTML = "";
     result.append(a);
+  };
+}
+
+function buildPdfCompressTool(container) {
+  const file = document.createElement("input");
+  file.type = "file";
+  file.accept = "application/pdf";
+  container.append(file);
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = "压缩并导出 PDF";
+  container.append(btn);
+  const result = createResultBox(container);
+  result.classList.remove("mono");
+  btn.onclick = async () => {
+    const f = file.files?.[0];
+    if (!f) {
+      result.textContent = "请选择 PDF";
+      return;
+    }
+    try {
+      const { PDFDocument } = await getPdfLib();
+      const src = await PDFDocument.load(await f.arrayBuffer(), { ignoreEncryption: true });
+      const outBytes = await src.save({ useObjectStreams: true, addDefaultPage: false });
+      const blob = new Blob([outBytes], { type: "application/pdf" });
+      result.innerHTML = `原始: ${(f.size / 1024).toFixed(1)} KB，输出: ${(blob.size / 1024).toFixed(1)} KB<br>`;
+      appendDownloadLink(result, blob, "compressed.pdf", "下载压缩后 PDF");
+    } catch (err) {
+      result.textContent = `压缩失败: ${err.message}`;
+    }
+  };
+}
+
+function buildPdfToImageTool(container) {
+  const file = document.createElement("input");
+  file.type = "file";
+  file.accept = "application/pdf";
+  container.append(file);
+  const row = document.createElement("div");
+  row.className = "field-row";
+  row.innerHTML = `
+    <label>格式
+      <select id="fmt">
+        <option value="image/png">PNG</option>
+        <option value="image/jpeg">JPG</option>
+      </select>
+    </label>
+    <label>缩放<input id="scale" type="number" value="1.5" min="1" max="3" step="0.1" /></label>
+  `;
+  container.append(row);
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = "转换为图片";
+  container.append(btn);
+  const result = createResultBox(container);
+  result.classList.remove("mono");
+
+  btn.onclick = async () => {
+    const f = file.files?.[0];
+    if (!f) {
+      result.textContent = "请选择 PDF";
+      return;
+    }
+    try {
+      result.textContent = "处理中...";
+      const pdfjs = await getPdfJsLib();
+      const bytes = new Uint8Array(await f.arrayBuffer());
+      const doc = await pdfjs.getDocument({ data: bytes, disableWorker: true }).promise;
+      const fmt = row.querySelector("#fmt").value;
+      const scale = Number(row.querySelector("#scale").value) || 1.5;
+      result.innerHTML = "";
+      for (let i = 1; i <= doc.numPages; i += 1) {
+        const page = await doc.getPage(i);
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.floor(viewport.width);
+        canvas.height = Math.floor(viewport.height);
+        await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+        const wrap = document.createElement("div");
+        wrap.style.marginBottom = "10px";
+        wrap.append(canvas, document.createElement("br"));
+        await new Promise((resolve) => {
+          canvas.toBlob((blob) => {
+            if (blob) appendDownloadLink(wrap, blob, `page-${i}.${fmt === "image/png" ? "png" : "jpg"}`, `下载第${i}页`);
+            resolve();
+          }, fmt, 0.9);
+        });
+        result.append(wrap);
+      }
+    } catch (err) {
+      result.textContent = `转换失败: ${err.message}`;
+    }
+  };
+}
+
+function buildPdfWatermarkTool(container) {
+  const file = document.createElement("input");
+  file.type = "file";
+  file.accept = "application/pdf";
+  container.append(file);
+  const row = document.createElement("div");
+  row.className = "field-row";
+  row.innerHTML = `
+    <label>水印文字<input id="txt" value="MiaoTools" /></label>
+    <label>字号<input id="size" type="number" value="36" min="10" /></label>
+    <label>透明度<input id="op" type="number" value="0.25" min="0" max="1" step="0.05" /></label>
+  `;
+  container.append(row);
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = "添加水印";
+  container.append(btn);
+  const result = createResultBox(container);
+  result.classList.remove("mono");
+
+  btn.onclick = async () => {
+    const f = file.files?.[0];
+    if (!f) {
+      result.textContent = "请选择 PDF";
+      return;
+    }
+    try {
+      const { PDFDocument, StandardFonts, rgb, degrees } = await getPdfLib();
+      const pdf = await PDFDocument.load(await f.arrayBuffer(), { ignoreEncryption: true });
+      const font = await pdf.embedFont(StandardFonts.Helvetica);
+      const txt = row.querySelector("#txt").value || "MiaoTools";
+      const size = Number(row.querySelector("#size").value) || 36;
+      const op = Math.max(0, Math.min(1, Number(row.querySelector("#op").value)));
+      pdf.getPages().forEach((p) => {
+        const { width, height } = p.getSize();
+        const tw = font.widthOfTextAtSize(txt, size);
+        p.drawText(txt, {
+          x: (width - tw) / 2,
+          y: height / 2,
+          size,
+          font,
+          rotate: degrees(-30),
+          color: rgb(0.5, 0.5, 0.5),
+          opacity: op,
+        });
+      });
+      const blob = new Blob([await pdf.save()], { type: "application/pdf" });
+      result.innerHTML = "";
+      appendDownloadLink(result, blob, "watermarked.pdf", "下载加水印 PDF");
+    } catch (err) {
+      result.textContent = `处理失败: ${err.message}`;
+    }
+  };
+}
+
+function buildPdfPageManageTool(container) {
+  const file = document.createElement("input");
+  file.type = "file";
+  file.accept = "application/pdf";
+  container.append(file);
+  const row = document.createElement("div");
+  row.className = "field-row";
+  row.innerHTML = `
+    <label>删除页码<input id="del" placeholder="如 2,4-6" /></label>
+    <label>重排页码<input id="order" placeholder="如 3,1,2（留空表示不重排）" /></label>
+  `;
+  container.append(row);
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = "执行页面管理";
+  container.append(btn);
+  const result = createResultBox(container);
+  result.classList.remove("mono");
+
+  btn.onclick = async () => {
+    const f = file.files?.[0];
+    if (!f) {
+      result.textContent = "请选择 PDF";
+      return;
+    }
+    try {
+      const { PDFDocument } = await getPdfLib();
+      const src = await PDFDocument.load(await f.arrayBuffer(), { ignoreEncryption: true });
+      const total = src.getPageCount();
+      const delSet = new Set(parsePageRanges(row.querySelector("#del").value || "", total));
+      const remained = [];
+      for (let i = 1; i <= total; i += 1) if (!delSet.has(i)) remained.push(i);
+      let order = remained;
+      const orderText = row.querySelector("#order").value.trim();
+      if (orderText) {
+        const custom = parsePageRanges(orderText, total).filter((p) => !delSet.has(p));
+        if (custom.length) order = custom;
+      }
+      if (!order.length) {
+        result.textContent = "处理后没有可输出页面";
+        return;
+      }
+      const out = await PDFDocument.create();
+      const pages = await out.copyPages(src, order.map((p) => p - 1));
+      pages.forEach((p) => out.addPage(p));
+      const blob = new Blob([await out.save()], { type: "application/pdf" });
+      result.innerHTML = `输出页数: ${order.length}<br>`;
+      appendDownloadLink(result, blob, "managed-pages.pdf", "下载处理后 PDF");
+    } catch (err) {
+      result.textContent = `处理失败: ${err.message}`;
+    }
+  };
+}
+
+function buildPdfEncryptDecryptTool(container) {
+  const file = document.createElement("input");
+  file.type = "file";
+  file.accept = "application/pdf,.mtpdf";
+  container.append(file);
+  const row = document.createElement("div");
+  row.className = "field-row";
+  row.innerHTML = `
+    <label>模式
+      <select id="mode">
+        <option value="enc">加密为 MTPDF</option>
+        <option value="dec">解密 MTPDF 为 PDF</option>
+      </select>
+    </label>
+    <label>密码<input id="pwd" type="password" /></label>
+  `;
+  container.append(row);
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = "执行";
+  container.append(btn);
+  const result = createResultBox(container);
+
+  async function deriveKey(password, salt) {
+    const mat = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveKey"]);
+    return crypto.subtle.deriveKey(
+      { name: "PBKDF2", salt, iterations: 120000, hash: "SHA-256" },
+      mat,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["encrypt", "decrypt"],
+    );
+  }
+
+  btn.onclick = async () => {
+    const f = file.files?.[0];
+    const pwd = row.querySelector("#pwd").value;
+    if (!f) {
+      result.textContent = "请选择文件";
+      return;
+    }
+    if (!pwd) {
+      result.textContent = "请输入密码";
+      return;
+    }
+    try {
+      const mode = row.querySelector("#mode").value;
+      if (mode === "enc") {
+        const data = new Uint8Array(await f.arrayBuffer());
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const key = await deriveKey(pwd, salt);
+        const enc = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, data);
+        const payload = JSON.stringify({
+          v: 1,
+          name: f.name,
+          salt: b64FromBytes(salt),
+          iv: b64FromBytes(iv),
+          data: b64FromBytes(enc),
+        });
+        const blob = new Blob([payload], { type: "application/json" });
+        result.innerHTML = "";
+        appendDownloadLink(result, blob, `${f.name}.mtpdf`, "下载加密文件");
+      } else {
+        const obj = JSON.parse(await f.text());
+        const key = await deriveKey(pwd, bytesFromB64(obj.salt));
+        const dec = await crypto.subtle.decrypt({ name: "AES-GCM", iv: bytesFromB64(obj.iv) }, key, bytesFromB64(obj.data));
+        const blob = new Blob([dec], { type: "application/pdf" });
+        result.innerHTML = "";
+        appendDownloadLink(result, blob, (obj.name || "restored") + ".pdf", "下载解密后 PDF");
+      }
+    } catch (err) {
+      result.textContent = `加解密失败: ${err.message}`;
+    }
+  };
+}
+
+function buildPdfExtractTextTool(container) {
+  const file = document.createElement("input");
+  file.type = "file";
+  file.accept = "application/pdf";
+  container.append(file);
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = "提取全文文本";
+  container.append(btn);
+  const result = createResultBox(container);
+  btn.onclick = async () => {
+    const f = file.files?.[0];
+    if (!f) {
+      result.textContent = "请选择 PDF";
+      return;
+    }
+    try {
+      result.textContent = "提取中...";
+      const pdfjs = await getPdfJsLib();
+      const bytes = new Uint8Array(await f.arrayBuffer());
+      const doc = await pdfjs.getDocument({ data: bytes, disableWorker: true }).promise;
+      const lines = [];
+      for (let i = 1; i <= doc.numPages; i += 1) {
+        const page = await doc.getPage(i);
+        const txt = await page.getTextContent();
+        lines.push(`\n===== 第 ${i} 页 =====\n`);
+        lines.push(txt.items.map((it) => it.str).join(" "));
+      }
+      result.textContent = lines.join("\n").trim() || "未提取到文本（可能是扫描件）";
+    } catch (err) {
+      result.textContent = `提取失败: ${err.message}`;
+    }
   };
 }
 
@@ -5283,14 +5602,14 @@ const tools = [
     id: "audio-convert",
     title: "音频格式转换",
     description: "音频文件转 WAV",
-    category: "文档与媒体",
+    category: "音频工具",
     builder: buildAudioTool,
   },
   {
     id: "pdf-tools",
     title: "PDF 合并拆分",
     description: "浏览器端合并/提取页面",
-    category: "文档与媒体",
+    category: "文档办公",
     builder: buildPdfTool,
   },
   {
@@ -5451,15 +5770,57 @@ const tools = [
     id: "img-to-pdf",
     title: "图片转 PDF",
     description: "多图片合并生成 PDF",
-    category: "文档与媒体",
+    category: "文档办公",
     builder: buildImageToPdfTool,
   },
   {
     id: "audio-trim",
     title: "音频裁剪器",
     description: "按时间区间裁剪并导出 WAV",
-    category: "文档与媒体",
+    category: "音频工具",
     builder: buildAudioTrimTool,
+  },
+  {
+    id: "pdf-compress",
+    title: "PDF 压缩",
+    description: "基础压缩优化并重新导出",
+    category: "文档办公",
+    builder: buildPdfCompressTool,
+  },
+  {
+    id: "pdf-to-image",
+    title: "PDF 转图片",
+    description: "逐页导出 PNG/JPG",
+    category: "文档办公",
+    builder: buildPdfToImageTool,
+  },
+  {
+    id: "pdf-watermark",
+    title: "PDF 加水印",
+    description: "批量添加文字水印",
+    category: "文档办公",
+    builder: buildPdfWatermarkTool,
+  },
+  {
+    id: "pdf-pages",
+    title: "PDF 页面重排/删除",
+    description: "支持删除页与自定义重排",
+    category: "文档办公",
+    builder: buildPdfPageManageTool,
+  },
+  {
+    id: "pdf-encrypt",
+    title: "PDF 加密/解密",
+    description: "AES 封装加密与还原",
+    category: "文档办公",
+    builder: buildPdfEncryptDecryptTool,
+  },
+  {
+    id: "pdf-text",
+    title: "PDF 提取文字",
+    description: "提取 PDF 文本层内容",
+    category: "文档办公",
+    builder: buildPdfExtractTextTool,
   },
   {
     id: "image-rotate-flip",
@@ -5882,16 +6243,16 @@ function renderOverview() {
   }
 
   const orderedCats = [
-    "金融理财",
+    "文档办公",
+    "图像工具",
+    "视频工具",
+    "可视化",
     "开发工具",
+    "音频工具",
+    "设计工具",
+    "金融理财",
     "安全工具",
     "AI工具",
-    "设计工具",
-    "图像工具",
-    "音频工具",
-    "视频工具",
-    "文档与媒体",
-    "可视化",
     "编码与数据",
     "文本处理",
     "时间与随机",
