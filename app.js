@@ -4596,18 +4596,13 @@ async function getFfmpegKit() {
             25000,
             "下载 ffmpeg-core.wasm 超时",
           );
-          const workerURL = await withTimeout(
-            toBlobURL(`${src.coreBase}/ffmpeg-core.worker.js`, "text/javascript"),
-            15000,
-            "下载 ffmpeg-core.worker.js 超时",
-          );
           const classWorkerURL = await withTimeout(
             toBlobURL(src.classWorker, "text/javascript"),
             15000,
             "下载 class worker 超时",
           );
           await withTimeout(
-            ffmpeg.load({ coreURL, wasmURL, workerURL, classWorkerURL }),
+            ffmpeg.load({ coreURL, wasmURL, classWorkerURL }),
             30000,
             "初始化 FFmpeg 引擎超时",
           );

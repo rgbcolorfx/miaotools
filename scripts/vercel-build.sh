@@ -53,10 +53,4 @@ download_with_fallback \
   "https://fastly.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.wasm" \
   "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.wasm"
 
-download_with_fallback \
-  "$CORE_DIR/ffmpeg-core.worker.js" \
-  "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.worker.js" \
-  "https://fastly.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.worker.js" \
-  "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.worker.js"
-
 echo "FFmpeg static assets prepared in: $TARGET_DIR"
