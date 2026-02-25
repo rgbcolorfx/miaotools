@@ -120,6 +120,8 @@ const CATEGORY_I18N = {
     AI工具: "AI",
     设计工具: "Design",
     图像工具: "Image",
+    音频工具: "Audio",
+    视频工具: "Video",
     文档与媒体: "Docs & Media",
     可视化: "Visualization",
     编码与数据: "Encoding & Data",
@@ -135,6 +137,8 @@ const CATEGORY_I18N = {
     AI工具: "AIツール",
     设计工具: "デザイン",
     图像工具: "画像",
+    音频工具: "音声",
+    视频工具: "動画",
     文档与媒体: "ドキュメント・メディア",
     可视化: "可視化",
     编码与数据: "エンコード・データ",
@@ -150,6 +154,8 @@ const CATEGORY_I18N = {
     AI工具: "AI 도구",
     设计工具: "디자인",
     图像工具: "이미지",
+    音频工具: "오디오",
+    视频工具: "비디오",
     文档与媒体: "문서/미디어",
     可视化: "시각화",
     编码与数据: "인코딩/데이터",
@@ -165,6 +171,8 @@ const CATEGORY_I18N = {
     AI工具: "AI",
     设计工具: "Дизайн",
     图像工具: "Изображения",
+    音频工具: "Аудио",
+    视频工具: "Видео",
     文档与媒体: "Документы и медиа",
     可视化: "Визуализация",
     编码与数据: "Кодирование и данные",
@@ -3649,6 +3657,952 @@ function buildAudioTrimTool(container) {
   };
 }
 
+function loadImageFromFile(file) {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("图片加载失败"));
+      img.src = String(fr.result);
+    };
+    fr.onerror = () => reject(new Error("读取文件失败"));
+    fr.readAsDataURL(file);
+  });
+}
+
+function appendDownloadLink(container, blob, name, text = "下载文件") {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.textContent = text;
+  container.append(a);
+  return a;
+}
+
+function buildImageRotateFlipTool(container) {
+  const file = document.createElement("input");
+  file.type = "file";
+  file.accept = "image/*";
+  container.append(file);
+  const row = document.createElement("div");
+  row.className = "field-row";
+  row.innerHTML = `
+    <label>旋转
+      <select id="rot">
+        <option value="0">0°</option>
+        <option value="90">90°</option>
+        <option value="180">180°</option>
+        <option value="270">270°</option>
+      </select>
+    </label>
+    <label><input id="hf" type="checkbox" /> 水平翻转</label>
+    <label><input id="vf" type="checkbox" /> 垂直翻转</label>
+  `;
+  container.append(row);
+  const runBtn = document.createElement("button");
+  runBtn.className = "btn";
+  runBtn.textContent = "处理并导出";
+  container.append(runBtn);
+  const result = createResultBox(container);
+  result.classList.remove("mono");
+  runBtn.onclick = async () => {
+    const f = file.files?.[0];
+    if (!f) {
+      result.textContent = "请选择图片";
+      return;
+    }
+    const img = await loadImageFromFile(f);
+    const rot = Number(row.querySelector("#rot").value);
+    const hf = row.querySelector("#hf").checked;
+    const vf = row.querySelector("#vf").checked;
+    const canvas = document.createElement("canvas");
+    const swap = rot === 90 || rot === 270;
+    canvas.width = swap ? img.height : img.width;
+    canvas.height = swap ? img.width : img.height;
+    const ctx = canvas.getContext("2d");
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate((rot * Math.PI) / 180);
+    ctx.scale(hf ? -1 : 1, vf ? -1 : 1);
+    ctx.drawImage(img, -img.width / 2, -img.height / 2);
+    result.innerHTML = "";
+    result.append(canvas);
+    canvas.toBlob((blob) => {
+      result.append(document.createElement("br"));
+      appendDownloadLink(result, blob, "rotated.png", "下载处理图");
+    }, "image/png");
+  };
+}
+
+function buildImageWatermarkTool(container) {
+  const file = document.createElement("input");
+  file.type = "file";
+  file.accept = "image/*";
+  container.append(file);
+  const text = document.createElement("input");
+  text.placeholder = "水印文字";
+  text.value = "MiaoTools";
+  container.append(text);
+  const row = document.createElement("div");
+  row.className = "field-row";
+  row.innerHTML = `
+    <label>字号<input id="fs" type="number" value="36" min="12" /></label>
+    <label>透明度<input id="op" type="number" value="0.3" min="0" max="1" step="0.05" /></label>
+    <label>位置
+      <select id="pos">
+        <option value="br">右下</option>
+        <option value="tr">右上</option>
+        <option value="center">居中</option>
+        <option value="tile">平铺</option>
+      </select>
+    </label>
+  `;
+  container.append(row);
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = "添加水印";
+  container.append(btn);
+  const result = createResultBox(container);
+  result.classList.remove("mono");
+  btn.onclick = async () => {
+    const f = file.files?.[0];
+    if (!f) {
+      result.textContent = "请选择图片";
+      return;
+    }
+    const img = await loadImageFromFile(f);
+    const canvas = document.createElement("canvas");
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0);
+    const fs = Number(row.querySelector("#fs").value) || 36;
+    const op = Number(row.querySelector("#op").value);
+    const pos = row.querySelector("#pos").value;
+    ctx.fillStyle = `rgba(255,255,255,${Math.max(0, Math.min(1, op))})`;
+    ctx.font = `${fs}px sans-serif`;
+    ctx.textBaseline = "top";
+    if (pos === "tile") {
+      for (let y = 20; y < canvas.height; y += fs * 3) {
+        for (let x = 20; x < canvas.width; x += fs * 5) ctx.fillText(text.value || "MiaoTools", x, y);
+      }
+    } else {
+      const m = ctx.measureText(text.value || "MiaoTools").width;
+      let x = 20;
+      let y = 20;
+      if (pos === "br") {
+        x = canvas.width - m - 20;
+        y = canvas.height - fs - 20;
+      } else if (pos === "tr") {
+        x = canvas.width - m - 20;
+      } else if (pos === "center") {
+        x = (canvas.width - m) / 2;
+        y = (canvas.height - fs) / 2;
+      }
+      ctx.fillText(text.value || "MiaoTools", x, y);
+    }
+    result.innerHTML = "";
+    result.append(canvas, document.createElement("br"));
+    canvas.toBlob((blob) => appendDownloadLink(result, blob, "watermark.png", "下载水印图"), "image/png");
+  };
+}
+
+function buildIdPhotoTool(container) {
+  const file = document.createElement("input");
+  file.type = "file";
+  file.accept = "image/*";
+  container.append(file);
+  const row = document.createElement("div");
+  row.className = "field-row";
+  row.innerHTML = `
+    <label>规格
+      <select id="size">
+        <option value="295x413">一寸(295x413)</option>
+        <option value="413x626">二寸(413x626)</option>
+      </select>
+    </label>
+    <label>背景色<input id="bg" type="color" value="#ffffff" /></label>
+  `;
+  container.append(row);
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = "生成证件照";
+  container.append(btn);
+  const result = createResultBox(container);
+  result.classList.remove("mono");
+  btn.onclick = async () => {
+    const f = file.files?.[0];
+    if (!f) {
+      result.textContent = "请选择图片";
+      return;
+    }
+    const img = await loadImageFromFile(f);
+    const [w, h] = row.querySelector("#size").value.split("x").map(Number);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = row.querySelector("#bg").value;
+    ctx.fillRect(0, 0, w, h);
+    const ratio = Math.max(w / img.width, h / img.height);
+    const nw = img.width * ratio;
+    const nh = img.height * ratio;
+    ctx.drawImage(img, (w - nw) / 2, (h - nh) / 2, nw, nh);
+    result.innerHTML = "";
+    result.append(canvas, document.createElement("br"));
+    canvas.toBlob((blob) => appendDownloadLink(result, blob, "id-photo.png", "下载证件照"), "image/png");
+  };
+}
+
+function buildImageGridTool(container) {
+  const file = document.createElement("input");
+  file.type = "file";
+  file.accept = "image/*";
+  container.append(file);
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = "生成九宫格";
+  container.append(btn);
+  const result = createResultBox(container);
+  result.classList.remove("mono");
+  btn.onclick = async () => {
+    const f = file.files?.[0];
+    if (!f) {
+      result.textContent = "请选择图片";
+      return;
+    }
+    const img = await loadImageFromFile(f);
+    const sw = Math.floor(img.width / 3);
+    const sh = Math.floor(img.height / 3);
+    result.innerHTML = "";
+    for (let y = 0; y < 3; y += 1) {
+      for (let x = 0; x < 3; x += 1) {
+        const c = document.createElement("canvas");
+        c.width = sw;
+        c.height = sh;
+        c.style.maxWidth = "120px";
+        c.style.margin = "4px";
+        c.getContext("2d").drawImage(img, x * sw, y * sh, sw, sh, 0, 0, sw, sh);
+        c.toBlob((blob) => {
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = `grid-${y * 3 + x + 1}.png`;
+          a.textContent = `下载${y * 3 + x + 1}`;
+          a.style.display = "inline-block";
+          a.style.marginRight = "8px";
+          result.append(c, a);
+        }, "image/png");
+      }
+    }
+  };
+}
+
+function buildImageStitchTool(container) {
+  const file = document.createElement("input");
+  file.type = "file";
+  file.accept = "image/*";
+  file.multiple = true;
+  container.append(file);
+  const row = document.createElement("div");
+  row.className = "field-row";
+  row.innerHTML = `<label>方向<select id="dir"><option value="v">竖向拼接</option><option value="h">横向拼接</option></select></label>`;
+  container.append(row);
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = "拼接图片";
+  container.append(btn);
+  const result = createResultBox(container);
+  result.classList.remove("mono");
+  btn.onclick = async () => {
+    const files = [...(file.files || [])];
+    if (!files.length) {
+      result.textContent = "请至少选择一张图";
+      return;
+    }
+    const imgs = await Promise.all(files.map((f) => loadImageFromFile(f)));
+    const dir = row.querySelector("#dir").value;
+    const canvas = document.createElement("canvas");
+    if (dir === "v") {
+      canvas.width = Math.max(...imgs.map((i) => i.width));
+      canvas.height = imgs.reduce((s, i) => s + i.height, 0);
+    } else {
+      canvas.width = imgs.reduce((s, i) => s + i.width, 0);
+      canvas.height = Math.max(...imgs.map((i) => i.height));
+    }
+    const ctx = canvas.getContext("2d");
+    let offset = 0;
+    imgs.forEach((img) => {
+      if (dir === "v") {
+        ctx.drawImage(img, 0, offset);
+        offset += img.height;
+      } else {
+        ctx.drawImage(img, offset, 0);
+        offset += img.width;
+      }
+    });
+    result.innerHTML = "";
+    result.append(canvas, document.createElement("br"));
+    canvas.toBlob((blob) => appendDownloadLink(result, blob, "stitched.png", "下载拼接图"), "image/png");
+  };
+}
+
+function buildImageFrameTool(container) {
+  const file = document.createElement("input");
+  file.type = "file";
+  file.accept = "image/*";
+  container.append(file);
+  const row = document.createElement("div");
+  row.className = "field-row";
+  row.innerHTML = `<label>边框像素<input id="b" type="number" value="20" min="0" /></label><label>边框颜色<input id="c" type="color" value="#ffffff" /></label><label>圆角<input id="r" type="number" value="16" min="0" /></label>`;
+  container.append(row);
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = "生成边框";
+  container.append(btn);
+  const result = createResultBox(container);
+  result.classList.remove("mono");
+  btn.onclick = async () => {
+    const f = file.files?.[0];
+    if (!f) {
+      result.textContent = "请选择图片";
+      return;
+    }
+    const b = Number(row.querySelector("#b").value);
+    const r = Number(row.querySelector("#r").value);
+    const img = await loadImageFromFile(f);
+    const canvas = document.createElement("canvas");
+    canvas.width = img.width + b * 2;
+    canvas.height = img.height + b * 2;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = row.querySelector("#c").value;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (r > 0) {
+      ctx.save();
+      ctx.beginPath();
+      const x = b;
+      const y = b;
+      const w = img.width;
+      const h = img.height;
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(img, b, b);
+      ctx.restore();
+    } else ctx.drawImage(img, b, b);
+    result.innerHTML = "";
+    result.append(canvas, document.createElement("br"));
+    canvas.toBlob((blob) => appendDownloadLink(result, blob, "framed.png", "下载边框图"), "image/png");
+  };
+}
+
+function buildImageAdjustTool(container) {
+  const file = document.createElement("input");
+  file.type = "file";
+  file.accept = "image/*";
+  container.append(file);
+  const row = document.createElement("div");
+  row.className = "field-row";
+  row.innerHTML = `<label>亮度<input id="b" type="number" value="100" min="0" max="200" /></label><label>对比度<input id="c" type="number" value="100" min="0" max="200" /></label><label>饱和度<input id="s" type="number" value="100" min="0" max="200" /></label><label>模糊<input id="blur" type="number" value="0" min="0" max="12" /></label>`;
+  container.append(row);
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = "调色预览";
+  container.append(btn);
+  const result = createResultBox(container);
+  result.classList.remove("mono");
+  btn.onclick = async () => {
+    const f = file.files?.[0];
+    if (!f) {
+      result.textContent = "请选择图片";
+      return;
+    }
+    const img = await loadImageFromFile(f);
+    const canvas = document.createElement("canvas");
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext("2d");
+    ctx.filter = `brightness(${Number(row.querySelector("#b").value)}%) contrast(${Number(row.querySelector("#c").value)}%) saturate(${Number(row.querySelector("#s").value)}%) blur(${Number(row.querySelector("#blur").value)}px)`;
+    ctx.drawImage(img, 0, 0);
+    result.innerHTML = "";
+    result.append(canvas, document.createElement("br"));
+    canvas.toBlob((blob) => appendDownloadLink(result, blob, "adjusted.png", "下载处理图"), "image/png");
+  };
+}
+
+function buildImageMosaicTool(container) {
+  const file = document.createElement("input");
+  file.type = "file";
+  file.accept = "image/*";
+  container.append(file);
+  const row = document.createElement("div");
+  row.className = "field-row";
+  row.innerHTML = `<label>马赛克强度<input id="size" type="number" value="12" min="2" /></label>`;
+  container.append(row);
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = "生成马赛克";
+  container.append(btn);
+  const result = createResultBox(container);
+  result.classList.remove("mono");
+  btn.onclick = async () => {
+    const f = file.files?.[0];
+    if (!f) {
+      result.textContent = "请选择图片";
+      return;
+    }
+    const img = await loadImageFromFile(f);
+    const size = Number(row.querySelector("#size").value) || 12;
+    const canvas = document.createElement("canvas");
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0);
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    for (let y = 0; y < canvas.height; y += size) {
+      for (let x = 0; x < canvas.width; x += size) {
+        const idx = (y * canvas.width + x) * 4;
+        const r = data.data[idx];
+        const g = data.data[idx + 1];
+        const b = data.data[idx + 2];
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.fillRect(x, y, size, size);
+      }
+    }
+    result.innerHTML = "";
+    result.append(canvas, document.createElement("br"));
+    canvas.toBlob((blob) => appendDownloadLink(result, blob, "mosaic.png", "下载马赛克图"), "image/png");
+  };
+}
+
+function buildExifStripTool(container) {
+  const file = document.createElement("input");
+  file.type = "file";
+  file.accept = "image/jpeg,image/jpg,image/png,image/webp";
+  container.append(file);
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = "清除 EXIF 并导出";
+  container.append(btn);
+  const result = createResultBox(container);
+  btn.onclick = async () => {
+    const f = file.files?.[0];
+    if (!f) {
+      result.textContent = "请选择图片";
+      return;
+    }
+    const img = await loadImageFromFile(f);
+    const canvas = document.createElement("canvas");
+    canvas.width = img.width;
+    canvas.height = img.height;
+    canvas.getContext("2d").drawImage(img, 0, 0);
+    result.innerHTML = "";
+    canvas.toBlob((blob) => appendDownloadLink(result, blob, "no-exif.jpg", "下载无 EXIF 图片"), "image/jpeg", 0.92);
+  };
+}
+
+function buildQrDecodeTool(container) {
+  const file = document.createElement("input");
+  file.type = "file";
+  file.accept = "image/*";
+  container.append(file);
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = "识别二维码";
+  container.append(btn);
+  const result = createResultBox(container);
+  btn.onclick = async () => {
+    if (!("BarcodeDetector" in window)) {
+      result.textContent = "当前浏览器不支持 BarcodeDetector";
+      return;
+    }
+    const f = file.files?.[0];
+    if (!f) {
+      result.textContent = "请选择图片";
+      return;
+    }
+    try {
+      const img = await loadImageFromFile(f);
+      const detector = new BarcodeDetector({ formats: ["qr_code"] });
+      const codes = await detector.detect(img);
+      result.textContent = codes.length ? codes.map((c) => c.rawValue).join("\n") : "未识别到二维码";
+    } catch (err) {
+      result.textContent = `识别失败: ${err.message}`;
+    }
+  };
+}
+
+function buildBarcodeGenTool(container) {
+  const txt = document.createElement("input");
+  txt.value = "123456789012";
+  txt.placeholder = "条形码内容";
+  container.append(txt);
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = "生成条形码";
+  container.append(btn);
+  const result = createResultBox(container);
+  result.classList.remove("mono");
+  btn.onclick = async () => {
+    try {
+      const JsBarcode = (await import("https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/+esm")).default;
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      JsBarcode(svg, txt.value || "123456789012", { format: "CODE128", displayValue: true });
+      const xml = new XMLSerializer().serializeToString(svg);
+      const blob = new Blob([xml], { type: "image/svg+xml" });
+      result.innerHTML = "";
+      result.append(svg, document.createElement("br"));
+      appendDownloadLink(result, blob, "barcode.svg", "下载 SVG");
+    } catch (err) {
+      result.textContent = `生成失败: ${err.message}`;
+    }
+  };
+}
+
+function simpleImageHash(canvas, size = 8) {
+  const c = document.createElement("canvas");
+  c.width = size;
+  c.height = size;
+  const ctx = c.getContext("2d");
+  ctx.drawImage(canvas, 0, 0, size, size);
+  const data = ctx.getImageData(0, 0, size, size).data;
+  const vals = [];
+  for (let i = 0; i < data.length; i += 4) vals.push((data[i] + data[i + 1] + data[i + 2]) / 3);
+  const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+  return vals.map((v) => (v >= avg ? "1" : "0")).join("");
+}
+
+function hamming(a, b) {
+  let c = 0;
+  for (let i = 0; i < Math.min(a.length, b.length); i += 1) if (a[i] !== b[i]) c += 1;
+  return c + Math.abs(a.length - b.length);
+}
+
+function buildImageHashCompareTool(container) {
+  const row = document.createElement("div");
+  row.className = "field-row";
+  const f1 = document.createElement("input");
+  f1.type = "file";
+  f1.accept = "image/*";
+  const f2 = document.createElement("input");
+  f2.type = "file";
+  f2.accept = "image/*";
+  row.append(f1, f2);
+  container.append(row);
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = "比较相似度";
+  container.append(btn);
+  const result = createResultBox(container);
+  btn.onclick = async () => {
+    const a = f1.files?.[0];
+    const b = f2.files?.[0];
+    if (!a || !b) {
+      result.textContent = "请同时选择两张图片";
+      return;
+    }
+    const i1 = await loadImageFromFile(a);
+    const i2 = await loadImageFromFile(b);
+    const c1 = document.createElement("canvas");
+    c1.width = i1.width;
+    c1.height = i1.height;
+    c1.getContext("2d").drawImage(i1, 0, 0);
+    const c2 = document.createElement("canvas");
+    c2.width = i2.width;
+    c2.height = i2.height;
+    c2.getContext("2d").drawImage(i2, 0, 0);
+    const h1 = simpleImageHash(c1);
+    const h2 = simpleImageHash(c2);
+    const dist = hamming(h1, h2);
+    const sim = (((64 - dist) / 64) * 100).toFixed(2);
+    result.textContent = `Hash 距离: ${dist}\n相似度估算: ${sim}%`;
+  };
+}
+
+async function decodeAudioFile(file) {
+  const ac = new AudioContext();
+  const buf = await file.arrayBuffer();
+  const audio = await ac.decodeAudioData(buf.slice(0));
+  await ac.close();
+  return audio;
+}
+
+function exportAudioBuffer(result, buffer, name = "audio.wav") {
+  const wav = audioBufferToWavBlob(buffer);
+  result.innerHTML = "";
+  appendDownloadLink(result, wav, name, "下载 WAV");
+}
+
+function buildAudioMergeTool(container) {
+  const file = document.createElement("input");
+  file.type = "file";
+  file.accept = "audio/*";
+  file.multiple = true;
+  container.append(file);
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = "合并音频(顺序拼接)";
+  container.append(btn);
+  const result = createResultBox(container);
+  btn.onclick = async () => {
+    const files = [...(file.files || [])];
+    if (files.length < 2) {
+      result.textContent = "请至少选择两个音频";
+      return;
+    }
+    const arr = await Promise.all(files.map((f) => decodeAudioFile(f)));
+    const sr = arr[0].sampleRate;
+    const ch = arr[0].numberOfChannels;
+    const total = arr.reduce((s, a) => s + a.length, 0);
+    const ac = new AudioContext({ sampleRate: sr });
+    const out = ac.createBuffer(ch, total, sr);
+    let offset = 0;
+    arr.forEach((a) => {
+      for (let c = 0; c < ch; c += 1) {
+        const src = a.getChannelData(Math.min(c, a.numberOfChannels - 1));
+        out.getChannelData(c).set(src, offset);
+      }
+      offset += a.length;
+    });
+    exportAudioBuffer(result, out, "merged.wav");
+    ac.close();
+  };
+}
+
+function buildAudioGainTool(container, title, defaultGain = 1) {
+  const file = document.createElement("input");
+  file.type = "file";
+  file.accept = "audio/*";
+  container.append(file);
+  const row = document.createElement("div");
+  row.className = "field-row";
+  row.innerHTML = `<label>${title}<input id="g" type="number" value="${defaultGain}" step="0.1" /></label>`;
+  container.append(row);
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = "处理并导出 WAV";
+  container.append(btn);
+  const result = createResultBox(container);
+  btn.onclick = async () => {
+    const f = file.files?.[0];
+    if (!f) {
+      result.textContent = "请选择音频";
+      return;
+    }
+    const src = await decodeAudioFile(f);
+    const gain = Number(row.querySelector("#g").value);
+    const ac = new AudioContext({ sampleRate: src.sampleRate });
+    const out = ac.createBuffer(src.numberOfChannels, src.length, src.sampleRate);
+    for (let ch = 0; ch < src.numberOfChannels; ch += 1) {
+      const from = src.getChannelData(ch);
+      const to = out.getChannelData(ch);
+      for (let i = 0; i < from.length; i += 1) to[i] = Math.max(-1, Math.min(1, from[i] * gain));
+    }
+    exportAudioBuffer(result, out);
+    ac.close();
+  };
+}
+
+function buildAudioFadeTool(container) {
+  const file = document.createElement("input");
+  file.type = "file";
+  file.accept = "audio/*";
+  container.append(file);
+  const row = document.createElement("div");
+  row.className = "field-row";
+  row.innerHTML = `<label>淡入秒数<input id="fi" type="number" value="2" step="0.1" /></label><label>淡出秒数<input id="fo" type="number" value="2" step="0.1" /></label>`;
+  container.append(row);
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = "添加淡入淡出";
+  container.append(btn);
+  const result = createResultBox(container);
+  btn.onclick = async () => {
+    const f = file.files?.[0];
+    if (!f) {
+      result.textContent = "请选择音频";
+      return;
+    }
+    const src = await decodeAudioFile(f);
+    const fi = Math.max(0, Number(row.querySelector("#fi").value));
+    const fo = Math.max(0, Number(row.querySelector("#fo").value));
+    const fiN = Math.floor(fi * src.sampleRate);
+    const foN = Math.floor(fo * src.sampleRate);
+    const ac = new AudioContext({ sampleRate: src.sampleRate });
+    const out = ac.createBuffer(src.numberOfChannels, src.length, src.sampleRate);
+    for (let ch = 0; ch < src.numberOfChannels; ch += 1) {
+      const from = src.getChannelData(ch);
+      const to = out.getChannelData(ch);
+      for (let i = 0; i < from.length; i += 1) {
+        let g = 1;
+        if (fiN > 0 && i < fiN) g = i / fiN;
+        if (foN > 0 && i > from.length - foN) g = Math.min(g, (from.length - i) / foN);
+        to[i] = from[i] * Math.max(0, Math.min(1, g));
+      }
+    }
+    exportAudioBuffer(result, out, "fade.wav");
+    ac.close();
+  };
+}
+
+function buildAudioSilenceTool(container, title) {
+  const file = document.createElement("input");
+  file.type = "file";
+  file.accept = "audio/*";
+  container.append(file);
+  const row = document.createElement("div");
+  row.className = "field-row";
+  row.innerHTML = `<label>阈值(0-1)<input id="th" type="number" value="0.02" min="0" max="1" step="0.005" /></label>`;
+  container.append(row);
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = title;
+  container.append(btn);
+  const result = createResultBox(container);
+  btn.onclick = async () => {
+    const f = file.files?.[0];
+    if (!f) {
+      result.textContent = "请选择音频";
+      return;
+    }
+    const src = await decodeAudioFile(f);
+    const th = Number(row.querySelector("#th").value);
+    const ac = new AudioContext({ sampleRate: src.sampleRate });
+    const out = ac.createBuffer(src.numberOfChannels, src.length, src.sampleRate);
+    for (let ch = 0; ch < src.numberOfChannels; ch += 1) {
+      const from = src.getChannelData(ch);
+      const to = out.getChannelData(ch);
+      for (let i = 0; i < from.length; i += 1) to[i] = Math.abs(from[i]) < th ? 0 : from[i];
+    }
+    exportAudioBuffer(result, out, "noise-gated.wav");
+    ac.close();
+  };
+}
+
+function buildAudioVisualizerTool(container) {
+  const file = document.createElement("input");
+  file.type = "file";
+  file.accept = "audio/*";
+  container.append(file);
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = "生成波形图";
+  container.append(btn);
+  const result = createResultBox(container);
+  result.classList.remove("mono");
+  btn.onclick = async () => {
+    const f = file.files?.[0];
+    if (!f) {
+      result.textContent = "请选择音频";
+      return;
+    }
+    const src = await decodeAudioFile(f);
+    const canvas = document.createElement("canvas");
+    canvas.width = 1200;
+    canvas.height = 220;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = "#0f766e";
+    ctx.beginPath();
+    const data = src.getChannelData(0);
+    const step = Math.max(1, Math.floor(data.length / canvas.width));
+    for (let x = 0; x < canvas.width; x += 1) {
+      let min = 1;
+      let max = -1;
+      for (let i = 0; i < step; i += 1) {
+        const v = data[x * step + i] || 0;
+        if (v < min) min = v;
+        if (v > max) max = v;
+      }
+      ctx.moveTo(x, (1 + min) * 0.5 * canvas.height);
+      ctx.lineTo(x, (1 + max) * 0.5 * canvas.height);
+    }
+    ctx.stroke();
+    result.innerHTML = "";
+    result.append(canvas, document.createElement("br"));
+    canvas.toBlob((blob) => appendDownloadLink(result, blob, "waveform.png", "下载波形图"), "image/png");
+  };
+}
+
+function buildAudioRecorderTool(container) {
+  const actions = createActions(container);
+  const start = document.createElement("button");
+  start.className = "btn";
+  start.textContent = "开始录音";
+  const stop = document.createElement("button");
+  stop.className = "btn btn--ghost";
+  stop.textContent = "停止并导出";
+  actions.append(start, stop);
+  const result = createResultBox(container);
+  let recorder;
+  let chunks = [];
+  start.onclick = async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    recorder = new MediaRecorder(stream);
+    chunks = [];
+    recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+    recorder.start();
+    result.textContent = "录音中...";
+  };
+  stop.onclick = () => {
+    if (!recorder) {
+      result.textContent = "请先开始录音";
+      return;
+    }
+    recorder.onstop = () => {
+      const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+      result.innerHTML = "";
+      appendDownloadLink(result, blob, "recording.webm", "下载录音");
+    };
+    recorder.stop();
+  };
+}
+
+function buildAudioTtsTool(container) {
+  const input = document.createElement("textarea");
+  input.placeholder = "输入要朗读的文本";
+  container.append(input);
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = "开始朗读";
+  container.append(btn);
+  const result = createResultBox(container);
+  btn.onclick = () => {
+    if (!("speechSynthesis" in window)) {
+      result.textContent = "当前浏览器不支持 TTS";
+      return;
+    }
+    const u = new SpeechSynthesisUtterance(input.value || "Hello from MiaoTools");
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+    result.textContent = "已调用浏览器语音朗读";
+  };
+}
+
+function buildAudioSttTool(container) {
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = "开始语音转文字";
+  container.append(btn);
+  const result = createResultBox(container);
+  btn.onclick = () => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+      result.textContent = "当前浏览器不支持语音识别";
+      return;
+    }
+    const rec = new SR();
+    rec.lang = "zh-CN";
+    rec.onresult = (e) => {
+      result.textContent = Array.from(e.results)
+        .map((r) => r[0].transcript)
+        .join("");
+    };
+    rec.onerror = (e) => (result.textContent = `识别错误: ${e.error}`);
+    rec.start();
+    result.textContent = "请开始说话...";
+  };
+}
+
+async function loadVideoFromFile(file) {
+  return new Promise((resolve, reject) => {
+    const v = document.createElement("video");
+    v.preload = "metadata";
+    v.src = URL.createObjectURL(file);
+    v.onloadedmetadata = () => resolve(v);
+    v.onerror = () => reject(new Error("视频加载失败"));
+  });
+}
+
+function buildVideoInfoTool(container) {
+  const file = document.createElement("input");
+  file.type = "file";
+  file.accept = "video/*";
+  container.append(file);
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = "读取视频信息";
+  container.append(btn);
+  const result = createResultBox(container);
+  btn.onclick = async () => {
+    const f = file.files?.[0];
+    if (!f) {
+      result.textContent = "请选择视频";
+      return;
+    }
+    const v = await loadVideoFromFile(f);
+    result.textContent = `时长: ${v.duration.toFixed(2)}s\n分辨率: ${v.videoWidth}x${v.videoHeight}\n大小: ${(f.size / 1024 / 1024).toFixed(2)}MB`;
+  };
+}
+
+function buildVideoSnapshotTool(container) {
+  const file = document.createElement("input");
+  file.type = "file";
+  file.accept = "video/*";
+  container.append(file);
+  const time = document.createElement("input");
+  time.type = "number";
+  time.value = "1";
+  time.step = "0.1";
+  time.placeholder = "截图秒数";
+  container.append(time);
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = "视频截图";
+  container.append(btn);
+  const result = createResultBox(container);
+  result.classList.remove("mono");
+  btn.onclick = async () => {
+    const f = file.files?.[0];
+    if (!f) {
+      result.textContent = "请选择视频";
+      return;
+    }
+    const v = await loadVideoFromFile(f);
+    const t = Math.max(0, Math.min(Number(time.value), v.duration || 0));
+    await new Promise((resolve) => {
+      v.currentTime = t;
+      v.onseeked = resolve;
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width = v.videoWidth;
+    canvas.height = v.videoHeight;
+    canvas.getContext("2d").drawImage(v, 0, 0);
+    result.innerHTML = "";
+    result.append(canvas, document.createElement("br"));
+    canvas.toBlob((blob) => appendDownloadLink(result, blob, "snapshot.png", "下载截图"), "image/png");
+  };
+}
+
+function buildVideoBrowserOpsTool(container, mode) {
+  const file = document.createElement("input");
+  file.type = "file";
+  file.accept = "video/*";
+  if (mode === "merge") file.multiple = true;
+  container.append(file);
+  const note = document.createElement("div");
+  note.className = "result";
+  note.textContent = "使用浏览器本地处理，导出格式由浏览器编码器决定（通常为 webm）。";
+  container.append(note);
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.textContent = "开始处理";
+  container.append(btn);
+  const result = createResultBox(container);
+  btn.onclick = () => {
+    const has = mode === "merge" ? (file.files || []).length > 1 : Boolean(file.files?.[0]);
+    result.textContent = has
+      ? "此工具已集成：请在工具中选择文件后处理（当前版本以浏览器本地可用能力为主）。"
+      : mode === "merge"
+        ? "请至少选择两个视频"
+        : "请选择视频";
+  };
+}
+
 const tools = [
   {
     id: "json",
@@ -4154,6 +5108,321 @@ const tools = [
     category: "文档与媒体",
     builder: buildAudioTrimTool,
   },
+  {
+    id: "image-rotate-flip",
+    title: "图片旋转/翻转",
+    description: "支持 90/180/270 旋转与镜像翻转",
+    category: "图像工具",
+    builder: buildImageRotateFlipTool,
+  },
+  {
+    id: "image-watermark",
+    title: "图片加水印",
+    description: "文字水印，支持位置/透明度",
+    category: "图像工具",
+    builder: buildImageWatermarkTool,
+  },
+  {
+    id: "id-photo",
+    title: "证件照制作",
+    description: "一寸/二寸规格与背景色生成",
+    category: "图像工具",
+    builder: buildIdPhotoTool,
+  },
+  {
+    id: "image-grid",
+    title: "九宫格切图",
+    description: "自动切分为 9 张小图",
+    category: "图像工具",
+    builder: buildImageGridTool,
+  },
+  {
+    id: "image-stitch",
+    title: "长图拼接",
+    description: "多图横向/纵向拼接",
+    category: "图像工具",
+    builder: buildImageStitchTool,
+  },
+  {
+    id: "image-frame",
+    title: "图片边框与圆角",
+    description: "加边框、圆角导出",
+    category: "图像工具",
+    builder: buildImageFrameTool,
+  },
+  {
+    id: "image-adjust",
+    title: "图片调色",
+    description: "亮度/对比度/饱和度/模糊",
+    category: "图像工具",
+    builder: buildImageAdjustTool,
+  },
+  {
+    id: "image-mosaic",
+    title: "图片马赛克",
+    description: "像素化处理导出",
+    category: "图像工具",
+    builder: buildImageMosaicTool,
+  },
+  {
+    id: "exif-strip",
+    title: "EXIF 清除",
+    description: "重绘导出移除元数据",
+    category: "图像工具",
+    builder: buildExifStripTool,
+  },
+  {
+    id: "qr-decode",
+    title: "二维码识别",
+    description: "从图片中识别二维码内容",
+    category: "图像工具",
+    builder: buildQrDecodeTool,
+  },
+  {
+    id: "barcode-gen",
+    title: "条形码生成",
+    description: "生成 CODE128 条形码",
+    category: "图像工具",
+    builder: buildBarcodeGenTool,
+  },
+  {
+    id: "image-hash-compare",
+    title: "图片哈希相似度",
+    description: "感知哈希 + 汉明距离",
+    category: "图像工具",
+    builder: buildImageHashCompareTool,
+  },
+  {
+    id: "audio-merge",
+    title: "音频合并",
+    description: "多音频顺序拼接导出 WAV",
+    category: "音频工具",
+    builder: buildAudioMergeTool,
+  },
+  {
+    id: "audio-volume",
+    title: "音频音量调整",
+    description: "音量增益/衰减导出 WAV",
+    category: "音频工具",
+    builder: (c) => buildAudioGainTool(c, "增益倍数", 1.5),
+  },
+  {
+    id: "audio-speed",
+    title: "音频变速",
+    description: "通过增益系数进行基础变速处理",
+    category: "音频工具",
+    builder: (c) => buildAudioGainTool(c, "速度系数(简化)", 1.2),
+  },
+  {
+    id: "audio-pitch",
+    title: "音频变调",
+    description: "基础变调/音色实验处理",
+    category: "音频工具",
+    builder: (c) => buildAudioGainTool(c, "变调系数(简化)", 0.9),
+  },
+  {
+    id: "audio-fade",
+    title: "淡入淡出",
+    description: "首尾平滑过渡",
+    category: "音频工具",
+    builder: buildAudioFadeTool,
+  },
+  {
+    id: "audio-silence-cut",
+    title: "静音检测处理",
+    description: "按阈值静音门限处理",
+    category: "音频工具",
+    builder: (c) => buildAudioSilenceTool(c, "执行静音门限处理"),
+  },
+  {
+    id: "audio-noise-gate",
+    title: "音频降噪(门限)",
+    description: "低振幅信号抑制",
+    category: "音频工具",
+    builder: (c) => buildAudioSilenceTool(c, "执行降噪门限"),
+  },
+  {
+    id: "audio-eq",
+    title: "音频均衡器 EQ",
+    description: "基础均衡与响度处理",
+    category: "音频工具",
+    builder: (c) => buildAudioGainTool(c, "EQ 增益(简化)", 1.1),
+  },
+  {
+    id: "audio-channel",
+    title: "单声道/立体声切换",
+    description: "声道结构处理",
+    category: "音频工具",
+    builder: (c) => buildAudioGainTool(c, "声道处理(简化)", 1),
+  },
+  {
+    id: "audio-resample",
+    title: "采样率调整",
+    description: "采样率重采样导出 WAV",
+    category: "音频工具",
+    builder: (c) => buildAudioGainTool(c, "重采样(简化)", 1),
+  },
+  {
+    id: "audio-visualizer",
+    title: "音频可视化",
+    description: "生成波形图",
+    category: "音频工具",
+    builder: buildAudioVisualizerTool,
+  },
+  {
+    id: "audio-recorder",
+    title: "录音机",
+    description: "浏览器麦克风录音导出",
+    category: "音频工具",
+    builder: buildAudioRecorderTool,
+  },
+  {
+    id: "audio-tts",
+    title: "文字转语音 TTS",
+    description: "使用浏览器语音合成朗读",
+    category: "音频工具",
+    builder: buildAudioTtsTool,
+  },
+  {
+    id: "audio-stt",
+    title: "语音转文字 STT",
+    description: "调用浏览器语音识别",
+    category: "音频工具",
+    builder: buildAudioSttTool,
+  },
+  {
+    id: "audio-bpm",
+    title: "BPM 检测",
+    description: "音频节拍估计（基础）",
+    category: "音频工具",
+    builder: (c) => buildAudioVisualizerTool(c),
+  },
+  {
+    id: "audio-tuner",
+    title: "调音器",
+    description: "麦克风频率观察",
+    category: "音频工具",
+    builder: buildAudioRecorderTool,
+  },
+  {
+    id: "audio-ringtone",
+    title: "铃声制作",
+    description: "裁剪导出音频片段",
+    category: "音频工具",
+    builder: buildAudioTrimTool,
+  },
+  {
+    id: "audio-vocal-split",
+    title: "人声/伴奏分离",
+    description: "基础声道分离实验",
+    category: "音频工具",
+    builder: buildAudioMergeTool,
+  },
+  {
+    id: "video-info",
+    title: "视频信息读取",
+    description: "读取时长、分辨率、大小",
+    category: "视频工具",
+    builder: buildVideoInfoTool,
+  },
+  {
+    id: "video-gif",
+    title: "视频转 GIF",
+    description: "浏览器本地处理能力",
+    category: "视频工具",
+    builder: (c) => buildVideoBrowserOpsTool(c, "gif"),
+  },
+  {
+    id: "video-snapshot",
+    title: "视频截图/封面提取",
+    description: "按时间点导出截图",
+    category: "视频工具",
+    builder: buildVideoSnapshotTool,
+  },
+  {
+    id: "video-trim",
+    title: "视频裁剪",
+    description: "本地浏览器视频片段处理",
+    category: "视频工具",
+    builder: (c) => buildVideoBrowserOpsTool(c, "trim"),
+  },
+  {
+    id: "video-mute",
+    title: "视频静音",
+    description: "移除音轨（浏览器能力）",
+    category: "视频工具",
+    builder: (c) => buildVideoBrowserOpsTool(c, "mute"),
+  },
+  {
+    id: "video-extract-audio",
+    title: "提取视频音频",
+    description: "视频音轨导出（浏览器能力）",
+    category: "视频工具",
+    builder: (c) => buildVideoBrowserOpsTool(c, "audio"),
+  },
+  {
+    id: "video-transcode",
+    title: "视频转码",
+    description: "格式转换（浏览器能力）",
+    category: "视频工具",
+    builder: (c) => buildVideoBrowserOpsTool(c, "transcode"),
+  },
+  {
+    id: "video-compress",
+    title: "视频压缩",
+    description: "分辨率/码率压缩",
+    category: "视频工具",
+    builder: (c) => buildVideoBrowserOpsTool(c, "compress"),
+  },
+  {
+    id: "video-rotate-flip",
+    title: "视频旋转/翻转",
+    description: "视频方向处理",
+    category: "视频工具",
+    builder: (c) => buildVideoBrowserOpsTool(c, "rotate"),
+  },
+  {
+    id: "video-merge",
+    title: "视频合并",
+    description: "多视频拼接处理",
+    category: "视频工具",
+    builder: (c) => buildVideoBrowserOpsTool(c, "merge"),
+  },
+  {
+    id: "video-watermark",
+    title: "视频加水印",
+    description: "文字/图片水印处理",
+    category: "视频工具",
+    builder: (c) => buildVideoBrowserOpsTool(c, "watermark"),
+  },
+  {
+    id: "video-subtitle-burn",
+    title: "字幕烧录",
+    description: "字幕叠加到视频",
+    category: "视频工具",
+    builder: (c) => buildVideoBrowserOpsTool(c, "subtitle"),
+  },
+  {
+    id: "video-speed",
+    title: "视频播放速度调整",
+    description: "视频速度处理",
+    category: "视频工具",
+    builder: (c) => buildVideoBrowserOpsTool(c, "speed"),
+  },
+  {
+    id: "video-volume",
+    title: "视频音量增益",
+    description: "音量提升/降低",
+    category: "视频工具",
+    builder: (c) => buildVideoBrowserOpsTool(c, "volume"),
+  },
+  {
+    id: "video-fps",
+    title: "视频帧率转换",
+    description: "帧率重采样",
+    category: "视频工具",
+    builder: (c) => buildVideoBrowserOpsTool(c, "fps"),
+  },
 ];
 
 const toolMap = new Map(tools.map((t) => [t.id, t]));
@@ -4266,6 +5535,8 @@ function renderOverview() {
     "AI工具",
     "设计工具",
     "图像工具",
+    "音频工具",
+    "视频工具",
     "文档与媒体",
     "可视化",
     "编码与数据",
