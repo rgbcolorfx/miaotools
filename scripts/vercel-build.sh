@@ -4,8 +4,9 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 TARGET_DIR="$ROOT_DIR/vendor/ffmpeg"
 CORE_DIR="$TARGET_DIR/core"
+UTIL_DIR="$TARGET_DIR/util"
 
-mkdir -p "$CORE_DIR"
+mkdir -p "$CORE_DIR" "$UTIL_DIR"
 
 download_with_fallback() {
   local output="$1"
@@ -30,16 +31,64 @@ download_with_fallback \
   "https://unpkg.com/@ffmpeg/ffmpeg@0.12.15/dist/esm/index.js"
 
 download_with_fallback \
+  "$TARGET_DIR/classes.js" \
+  "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/classes.js" \
+  "https://fastly.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/classes.js" \
+  "https://unpkg.com/@ffmpeg/ffmpeg@0.12.15/dist/esm/classes.js"
+
+download_with_fallback \
+  "$TARGET_DIR/const.js" \
+  "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/const.js" \
+  "https://fastly.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/const.js" \
+  "https://unpkg.com/@ffmpeg/ffmpeg@0.12.15/dist/esm/const.js"
+
+download_with_fallback \
+  "$TARGET_DIR/errors.js" \
+  "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/errors.js" \
+  "https://fastly.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/errors.js" \
+  "https://unpkg.com/@ffmpeg/ffmpeg@0.12.15/dist/esm/errors.js"
+
+download_with_fallback \
+  "$TARGET_DIR/types.js" \
+  "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/types.js" \
+  "https://fastly.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/types.js" \
+  "https://unpkg.com/@ffmpeg/ffmpeg@0.12.15/dist/esm/types.js"
+
+download_with_fallback \
+  "$TARGET_DIR/utils.js" \
+  "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/utils.js" \
+  "https://fastly.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/utils.js" \
+  "https://unpkg.com/@ffmpeg/ffmpeg@0.12.15/dist/esm/utils.js"
+
+download_with_fallback \
   "$TARGET_DIR/ffmpeg-worker.js" \
   "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/worker.js" \
   "https://fastly.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/worker.js" \
   "https://unpkg.com/@ffmpeg/ffmpeg@0.12.15/dist/esm/worker.js"
 
 download_with_fallback \
-  "$TARGET_DIR/ffmpeg-util.js" \
+  "$UTIL_DIR/index.js" \
   "https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/index.js" \
   "https://fastly.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/index.js" \
   "https://unpkg.com/@ffmpeg/util@0.12.2/dist/esm/index.js"
+
+download_with_fallback \
+  "$UTIL_DIR/const.js" \
+  "https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/const.js" \
+  "https://fastly.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/const.js" \
+  "https://unpkg.com/@ffmpeg/util@0.12.2/dist/esm/const.js"
+
+download_with_fallback \
+  "$UTIL_DIR/errors.js" \
+  "https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/errors.js" \
+  "https://fastly.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/errors.js" \
+  "https://unpkg.com/@ffmpeg/util@0.12.2/dist/esm/errors.js"
+
+download_with_fallback \
+  "$UTIL_DIR/types.js" \
+  "https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/types.js" \
+  "https://fastly.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/types.js" \
+  "https://unpkg.com/@ffmpeg/util@0.12.2/dist/esm/types.js"
 
 download_with_fallback \
   "$CORE_DIR/ffmpeg-core.js" \

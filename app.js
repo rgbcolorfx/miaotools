@@ -4557,7 +4557,7 @@ async function getFfmpegKit() {
           "https://unpkg.com/@ffmpeg/ffmpeg@0.12.15/dist/esm/index.js",
         ]),
         importWithFallback([
-          `${window.location.origin}/vendor/ffmpeg/ffmpeg-util.js`,
+          `${window.location.origin}/vendor/ffmpeg/util/index.js`,
           "https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/index.js",
           "https://fastly.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/index.js",
           "https://unpkg.com/@ffmpeg/util@0.12.2/dist/esm/index.js",
