@@ -4518,6 +4518,92 @@ async function loadVideoFromFile(file) {
   });
 }
 
+let ffmpegKitPromise;
+async function getFfmpegKit() {
+  if (!ffmpegKitPromise) {
+    ffmpegKitPromise = (async () => {
+      const [{ FFmpeg }, { fetchFile, toBlobURL }] = await Promise.all([
+        import("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/index.js"),
+        import("https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/index.js"),
+      ]);
+      const ffmpeg = new FFmpeg();
+      const base = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
+      const coreURL = await toBlobURL(`${base}/ffmpeg-core.js`, "text/javascript");
+      const wasmURL = await toBlobURL(`${base}/ffmpeg-core.wasm`, "application/wasm");
+      const workerURL = await toBlobURL(`${base}/ffmpeg-core.worker.js`, "text/javascript");
+      const classWorkerURL = new URL("ffmpeg-worker-proxy.js", window.location.href).href;
+      await ffmpeg.load({ coreURL, wasmURL, workerURL, classWorkerURL });
+      return { ffmpeg, fetchFile };
+    })();
+  }
+  return ffmpegKitPromise;
+}
+
+async function runFfmpegVideoJob(file, outputName, args, onProgress) {
+  const { ffmpeg, fetchFile } = await getFfmpegKit();
+  let offProgress = null;
+  if (onProgress) {
+    const handler = ({ progress, time }) => onProgress(progress, time);
+    ffmpeg.on("progress", handler);
+    offProgress = () => {
+      try {
+        ffmpeg.off("progress", handler);
+      } catch {}
+    };
+  }
+  const inName = `input_${Date.now()}_${file.name.replace(/[^\w.-]+/g, "_") || "video.mp4"}`;
+  await ffmpeg.writeFile(inName, await fetchFile(file));
+  await ffmpeg.exec(["-y", "-i", inName, ...args, outputName]);
+  const data = await ffmpeg.readFile(outputName);
+  if (offProgress) offProgress();
+  try {
+    await ffmpeg.deleteFile(inName);
+  } catch {}
+  try {
+    await ffmpeg.deleteFile(outputName);
+  } catch {}
+  return data;
+}
+
+async function runFfmpegConcatJob(files, outputName, onProgress) {
+  const { ffmpeg, fetchFile } = await getFfmpegKit();
+  let offProgress = null;
+  if (onProgress) {
+    const handler = ({ progress, time }) => onProgress(progress, time);
+    ffmpeg.on("progress", handler);
+    offProgress = () => {
+      try {
+        ffmpeg.off("progress", handler);
+      } catch {}
+    };
+  }
+  const names = [];
+  for (let i = 0; i < files.length; i += 1) {
+    const safe = files[i].name.replace(/[^\w.-]+/g, "_") || `v${i}.mp4`;
+    const inName = `input_${Date.now()}_${i}_${safe}`;
+    names.push(inName);
+    await ffmpeg.writeFile(inName, await fetchFile(files[i]));
+  }
+  const list = names.map((n) => `file '${n}'`).join("\n");
+  const listName = `concat_${Date.now()}.txt`;
+  await ffmpeg.writeFile(listName, new TextEncoder().encode(list));
+  await ffmpeg.exec(["-y", "-f", "concat", "-safe", "0", "-i", listName, "-c:v", "mpeg4", "-c:a", "aac", outputName]);
+  const data = await ffmpeg.readFile(outputName);
+  if (offProgress) offProgress();
+  names.forEach(async (n) => {
+    try {
+      await ffmpeg.deleteFile(n);
+    } catch {}
+  });
+  try {
+    await ffmpeg.deleteFile(listName);
+  } catch {}
+  try {
+    await ffmpeg.deleteFile(outputName);
+  } catch {}
+  return data;
+}
+
 function buildVideoInfoTool(container) {
   const file = document.createElement("input");
   file.type = "file";
@@ -4584,22 +4670,187 @@ function buildVideoBrowserOpsTool(container, mode) {
   file.accept = "video/*";
   if (mode === "merge") file.multiple = true;
   container.append(file);
-  const note = document.createElement("div");
-  note.className = "result";
-  note.textContent = "使用浏览器本地处理，导出格式由浏览器编码器决定（通常为 webm）。";
+
+  const controls = document.createElement("div");
+  controls.className = "field-row";
+  let defaults = "";
+  if (mode === "trim") {
+    defaults = `<label>开始秒数<input id="start" type="number" value="0" min="0" step="0.1" /></label>
+      <label>结束秒数<input id="end" type="number" value="10" min="0" step="0.1" /></label>`;
+  } else if (mode === "gif") {
+    defaults = `<label>开始秒数<input id="start" type="number" value="0" min="0" step="0.1" /></label>
+      <label>时长(秒)<input id="dur" type="number" value="3" min="0.5" step="0.5" /></label>`;
+  } else if (mode === "transcode") {
+    defaults = `<label>输出格式
+      <select id="fmt">
+        <option value="mp4">MP4</option>
+        <option value="webm">WEBM</option>
+      </select>
+    </label>`;
+  } else if (mode === "compress") {
+    defaults = `<label>目标宽度<input id="w" type="number" value="1280" min="320" step="2" /></label>
+      <label>CRF(18-35)<input id="crf" type="number" value="28" min="18" max="35" /></label>`;
+  } else if (mode === "rotate") {
+    defaults = `<label>旋转/翻转
+      <select id="rot">
+        <option value="transpose=1">顺时针 90°</option>
+        <option value="transpose=2">逆时针 90°</option>
+        <option value="hflip">水平翻转</option>
+        <option value="vflip">垂直翻转</option>
+      </select>
+    </label>`;
+  } else if (mode === "watermark") {
+    defaults = `<label>水印文字<input id="wm" value="MiaoTools" /></label>`;
+  } else if (mode === "subtitle") {
+    defaults = `<label>SRT 字幕文件<input id="sub" type="file" accept=".srt,text/plain" /></label>`;
+  } else if (mode === "speed") {
+    defaults = `<label>速度倍数<input id="sp" type="number" value="1.25" min="0.5" max="2" step="0.05" /></label>`;
+  } else if (mode === "volume") {
+    defaults = `<label>音量倍数<input id="vol" type="number" value="1.5" min="0" max="5" step="0.1" /></label>`;
+  } else if (mode === "fps") {
+    defaults = `<label>目标 FPS<input id="fps" type="number" value="24" min="12" max="60" /></label>`;
+  }
+  if (defaults) {
+    controls.innerHTML = defaults;
+    container.append(controls);
+  }
+
+  const note = document.createElement("p");
+  note.className = "hint";
+  note.textContent = "视频处理在浏览器本地执行，首次会下载 FFmpeg 核心，处理大文件耗时较长。";
   container.append(note);
+
   const btn = document.createElement("button");
   btn.className = "btn";
-  btn.textContent = "开始处理";
+  btn.textContent = "开始处理并导出";
   container.append(btn);
   const result = createResultBox(container);
+  result.classList.remove("mono");
+  const setProgress = (progress, time) => {
+    const pct = Math.max(0, Math.min(100, Math.round((progress || 0) * 100)));
+    result.textContent = `处理中... ${pct}%${time ? `（${(time / 1000000).toFixed(1)}s）` : ""}`;
+  };
   btn.onclick = () => {
-    const has = mode === "merge" ? (file.files || []).length > 1 : Boolean(file.files?.[0]);
-    result.textContent = has
-      ? "此工具已集成：请在工具中选择文件后处理（当前版本以浏览器本地可用能力为主）。"
-      : mode === "merge"
-        ? "请至少选择两个视频"
-        : "请选择视频";
+    (async () => {
+      try {
+        if (mode === "merge") {
+          const files = [...(file.files || [])];
+          if (files.length < 2) {
+            result.textContent = "请至少选择两个视频";
+            return;
+          }
+          result.textContent = "初始化视频引擎中...";
+          const data = await runFfmpegConcatJob(files, "merged.mp4", setProgress);
+          const blob = new Blob([data.buffer], { type: "video/mp4" });
+          result.innerHTML = "";
+          appendDownloadLink(result, blob, "merged.mp4", "下载合并后视频");
+          return;
+        }
+
+        const f = file.files?.[0];
+        if (!f) {
+          result.textContent = "请选择视频";
+          return;
+        }
+
+        let args = [];
+        let outName = "output.mp4";
+        let outType = "video/mp4";
+
+        if (mode === "gif") {
+          const start = Number(controls.querySelector("#start")?.value || 0);
+          const dur = Number(controls.querySelector("#dur")?.value || 3);
+          args = ["-ss", String(start), "-t", String(dur), "-vf", "fps=10,scale=480:-1:flags=lanczos"];
+          outName = "output.gif";
+          outType = "image/gif";
+        } else if (mode === "trim") {
+          const start = Number(controls.querySelector("#start")?.value || 0);
+          const end = Number(controls.querySelector("#end")?.value || 10);
+          if (!(end > start)) {
+            result.textContent = "结束时间必须大于开始时间";
+            return;
+          }
+          args = ["-ss", String(start), "-to", String(end), "-c:v", "mpeg4", "-c:a", "aac"];
+        } else if (mode === "mute") {
+          args = ["-c:v", "copy", "-an"];
+        } else if (mode === "audio") {
+          args = ["-vn", "-acodec", "mp3"];
+          outName = "audio.mp3";
+          outType = "audio/mpeg";
+        } else if (mode === "transcode") {
+          const fmt = controls.querySelector("#fmt")?.value || "mp4";
+          if (fmt === "webm") {
+            args = ["-c:v", "libvpx", "-c:a", "libvorbis"];
+            outName = "transcoded.webm";
+            outType = "video/webm";
+          } else {
+            args = ["-c:v", "mpeg4", "-c:a", "aac"];
+            outName = "transcoded.mp4";
+          }
+        } else if (mode === "compress") {
+          const w = Number(controls.querySelector("#w")?.value || 1280);
+          const crf = Number(controls.querySelector("#crf")?.value || 28);
+          args = ["-vf", `scale='min(${w},iw)':-2`, "-q:v", String(Math.max(2, Math.min(20, crf - 10))), "-c:v", "mpeg4", "-c:a", "aac"];
+          outName = "compressed.mp4";
+        } else if (mode === "rotate") {
+          const vf = controls.querySelector("#rot")?.value || "transpose=1";
+          args = ["-vf", vf, "-c:a", "copy"];
+          outName = "rotated.mp4";
+        } else if (mode === "watermark") {
+          const wm = (controls.querySelector("#wm")?.value || "MiaoTools").replace(/:/g, "\\:").replace(/'/g, "\\'");
+          args = ["-vf", `drawtext=text='${wm}':x=w-tw-20:y=20:fontsize=32:fontcolor=white:box=1:boxcolor=black@0.4`, "-c:a", "copy"];
+          outName = "watermark.mp4";
+        } else if (mode === "subtitle") {
+          const subFile = controls.querySelector("#sub")?.files?.[0];
+          if (!subFile) {
+            result.textContent = "请上传 SRT 字幕文件";
+            return;
+          }
+          const { ffmpeg, fetchFile } = await getFfmpegKit();
+          const inName = `input_${Date.now()}.mp4`;
+          const subName = `subtitle_${Date.now()}.srt`;
+          await ffmpeg.writeFile(inName, await fetchFile(f));
+          await ffmpeg.writeFile(subName, await fetchFile(subFile));
+          result.textContent = "初始化视频引擎中...";
+          await ffmpeg.exec(["-i", inName, "-vf", `subtitles=${subName}`, "-c:a", "copy", "subtitle_burn.mp4"]);
+          const data = await ffmpeg.readFile("subtitle_burn.mp4");
+          const blob = new Blob([data.buffer], { type: "video/mp4" });
+          result.innerHTML = "";
+          appendDownloadLink(result, blob, "subtitle_burn.mp4", "下载烧录后视频");
+          return;
+        } else if (mode === "speed") {
+          const sp = Number(controls.querySelector("#sp")?.value || 1.25);
+          const atempo = Math.max(0.5, Math.min(2, sp));
+          args = ["-filter:v", `setpts=${(1 / sp).toFixed(4)}*PTS`, "-filter:a", `atempo=${atempo.toFixed(2)}`];
+          outName = "speed.mp4";
+        } else if (mode === "volume") {
+          const vol = Number(controls.querySelector("#vol")?.value || 1.5);
+          args = ["-filter:a", `volume=${vol}`];
+          outName = "volume.mp4";
+        } else if (mode === "fps") {
+          const fps = Number(controls.querySelector("#fps")?.value || 24);
+          args = ["-filter:v", `fps=${fps}`, "-c:a", "copy"];
+          outName = "fps.mp4";
+        } else {
+          result.textContent = "未识别的处理模式";
+          return;
+        }
+
+        result.textContent = "初始化视频引擎中...";
+        const watchdog = setTimeout(() => {
+          if (result.textContent.includes("处理中")) {
+            result.textContent = "处理时间较长（大文件常见），请继续等待，或改用更小视频测试。";
+          }
+        }, 20000);
+        const data = await runFfmpegVideoJob(f, outName, args, setProgress);
+        clearTimeout(watchdog);
+        const blob = new Blob([data.buffer], { type: outType });
+        result.innerHTML = "";
+        appendDownloadLink(result, blob, outName, `下载 ${outName}`);
+      } catch (err) {
+        result.textContent = `处理失败: ${err.message || err}`;
+      }
+    })();
   };
 }
 
