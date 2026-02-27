@@ -25,7 +25,7 @@ const LANG_STORAGE_KEY = "miaotools_lang_v1";
 function getInitialLang() {
   const saved = localStorage.getItem(LANG_STORAGE_KEY);
   if (saved === "en" || saved === "zh" || saved === "ja" || saved === "ko" || saved === "ru") return saved;
-  return "en";
+  return "zh";
 }
 
 const state = {
@@ -449,24 +449,25 @@ function buildHtmlTool(container) {
 }
 
 function buildTextOpsTool(container) {
+  const zh = state.lang === "zh";
   const input = document.createElement("textarea");
-  input.placeholder = "每行一条";
+  input.placeholder = zh ? "每行一条" : "One item per line";
   container.append(input);
 
   const row = document.createElement("div");
   row.className = "field-row";
   row.innerHTML = `
-    <label>排序方式
+    <label>${zh ? "排序方式" : "Sort"}
       <select id="sortSelect">
-        <option value="none">不排序</option>
-        <option value="asc">升序</option>
-        <option value="desc">降序</option>
+        <option value="none">${zh ? "不排序" : "No sort"}</option>
+        <option value="asc">${zh ? "升序" : "Ascending"}</option>
+        <option value="desc">${zh ? "降序" : "Descending"}</option>
       </select>
     </label>
-    <label>去重
+    <label>${zh ? "去重" : "Deduplicate"}
       <select id="uniqSelect">
-        <option value="yes">去重</option>
-        <option value="no">不去重</option>
+        <option value="yes">${zh ? "去重" : "Yes"}</option>
+        <option value="no">${zh ? "不去重" : "No"}</option>
       </select>
     </label>
   `;
@@ -474,7 +475,7 @@ function buildTextOpsTool(container) {
 
   const runBtn = document.createElement("button");
   runBtn.className = "btn";
-  runBtn.textContent = "处理";
+  runBtn.textContent = zh ? "处理" : "Process";
   container.append(runBtn);
   const result = createResultBox(container);
 
