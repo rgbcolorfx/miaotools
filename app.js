@@ -6326,6 +6326,8 @@ const TOOL_UI_ZH_EN = [
   ["生成", "Generate"],
   ["转换", "Convert"],
   ["处理", "Process"],
+  ["处理中", "Processing"],
+  ["处理中...", "Processing..."],
   ["导出", "Export"],
   ["上传", "Upload"],
   ["提取", "Extract"],
@@ -6356,6 +6358,34 @@ const TOOL_UI_ZH_EN = [
   ["密码", "password"],
   ["失败", "failed"],
   ["成功", "success"],
+  ["错误", "Error"],
+  ["无效", "Invalid"],
+  ["完成", "Done"],
+  ["总页数", "Total pages"],
+  ["总帧数", "Total frames"],
+  ["剩余", "Remaining"],
+  ["原始", "Original"],
+  ["输出", "Output"],
+  ["当前浏览器不支持", "Current browser does not support"],
+  ["请稍候", "Please wait"],
+  ["请重试", "Please retry"],
+  ["开始秒数", "Start (s)"],
+  ["结束秒数", "End (s)"],
+  ["页码范围", "Page range"],
+  ["页码", "Pages"],
+  ["算法", "Algorithm"],
+  ["类型", "Type"],
+  ["模式", "Mode"],
+  ["宽", "Width"],
+  ["高", "Height"],
+  ["颜色", "Color"],
+  ["透明度", "Opacity"],
+  ["预览", "Preview"],
+  ["结果", "Result"],
+  ["目标", "Target"],
+  ["默认", "Default"],
+  ["并导出", "and export"],
+  ["并下载", "and download"],
   ["请先", "Please"],
   ["请至少", "Please select at least"],
   ["请", "Please "],
@@ -6391,10 +6421,41 @@ function localizeToolUiText(root) {
     if (el.title && /[\u4e00-\u9fa5]/.test(el.title)) {
       el.title = zhToEnText(el.title);
     }
+    if ((el.tagName === "INPUT" || el.tagName === "BUTTON") && el.value && /[\u4e00-\u9fa5]/.test(el.value)) {
+      el.value = zhToEnText(el.value);
+    }
+    if (el.textContent && /[\u4e00-\u9fa5]/.test(el.textContent)) {
+      el.textContent = zhToEnText(el.textContent);
+    }
     if (el.value && el.tagName === "OPTION" && /[\u4e00-\u9fa5]/.test(el.value)) {
       el.value = zhToEnText(el.value);
     }
   });
+}
+
+let toolUiObserver = null;
+function observeToolUiLocalization(root) {
+  if (toolUiObserver) {
+    toolUiObserver.disconnect();
+    toolUiObserver = null;
+  }
+  if (!root || state.lang === "zh" || typeof MutationObserver === "undefined") return;
+  toolUiObserver = new MutationObserver((mutations) => {
+    for (const m of mutations) {
+      if (m.type === "childList") {
+        m.addedNodes.forEach((n) => {
+          if (n && n.nodeType === 1) localizeToolUiText(n);
+          if (n && n.nodeType === 3 && /[\u4e00-\u9fa5]/.test(n.nodeValue || "")) {
+            n.nodeValue = zhToEnText(n.nodeValue || "");
+          }
+        });
+      } else if (m.type === "characterData") {
+        const v = m.target?.nodeValue || "";
+        if (/[\u4e00-\u9fa5]/.test(v)) m.target.nodeValue = zhToEnText(v);
+      }
+    }
+  });
+  toolUiObserver.observe(root, { childList: true, subtree: true, characterData: true });
 }
 
 function getCurrentToolId() {
@@ -6530,6 +6591,7 @@ function renderDetail(tool) {
   dom.detailToolUI.innerHTML = "";
   tool.builder(dom.detailToolUI);
   localizeToolUiText(dom.detailToolUI);
+  observeToolUiLocalization(dom.detailToolUI);
   renderToolDoc(tool);
 }
 
