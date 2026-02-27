@@ -6325,6 +6325,7 @@ const TOOL_UI_ZH_EN = [
   ["清空", "Clear"],
   ["生成", "Generate"],
   ["转换", "Convert"],
+  ["转", " to "],
   ["处理", "Process"],
   ["处理中", "Processing"],
   ["处理中...", "Processing..."],
@@ -6433,6 +6434,48 @@ function localizeToolUiText(root) {
   });
 }
 
+function enhanceFileInputsForLocale(root) {
+  if (!root) return;
+  const isZh = state.lang === "zh";
+  root.querySelectorAll('input[type="file"]').forEach((input) => {
+    let wrap = input.nextElementSibling;
+    if (!wrap || !wrap.classList?.contains("file-picker")) {
+      input.style.display = "none";
+      wrap = document.createElement("div");
+      wrap.className = "file-picker";
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn btn--ghost";
+      btn.dataset.fileBtn = "1";
+      btn.onclick = () => input.click();
+
+      const name = document.createElement("span");
+      name.className = "file-picker__name";
+      name.dataset.fileName = "1";
+
+      input.addEventListener("change", () => {
+        const zhNow = state.lang === "zh";
+        const files = [...(input.files || [])];
+        if (!files.length) {
+          name.textContent = zhNow ? "未选择文件" : "No file chosen";
+        } else if (files.length === 1) {
+          name.textContent = files[0].name;
+        } else {
+          name.textContent = zhNow ? `已选择 ${files.length} 个文件` : `${files.length} files selected`;
+        }
+      });
+
+      wrap.append(btn, name);
+      input.insertAdjacentElement("afterend", wrap);
+    }
+    const btnNode = wrap.querySelector("[data-file-btn]");
+    const nameNode = wrap.querySelector("[data-file-name]");
+    if (btnNode) btnNode.textContent = isZh ? (input.multiple ? "选择文件" : "选择文件") : input.multiple ? "Choose files" : "Choose file";
+    if (nameNode && !(input.files && input.files.length)) nameNode.textContent = isZh ? "未选择文件" : "No file chosen";
+  });
+}
+
 let toolUiObserver = null;
 function observeToolUiLocalization(root) {
   if (toolUiObserver) {
@@ -6444,7 +6487,10 @@ function observeToolUiLocalization(root) {
     for (const m of mutations) {
       if (m.type === "childList") {
         m.addedNodes.forEach((n) => {
-          if (n && n.nodeType === 1) localizeToolUiText(n);
+          if (n && n.nodeType === 1) {
+            localizeToolUiText(n);
+            enhanceFileInputsForLocale(n);
+          }
           if (n && n.nodeType === 3 && /[\u4e00-\u9fa5]/.test(n.nodeValue || "")) {
             n.nodeValue = zhToEnText(n.nodeValue || "");
           }
@@ -6590,6 +6636,7 @@ function renderDetail(tool) {
   dom.detailDesc.textContent = localizeToolDescription(tool);
   dom.detailToolUI.innerHTML = "";
   tool.builder(dom.detailToolUI);
+  enhanceFileInputsForLocale(dom.detailToolUI);
   localizeToolUiText(dom.detailToolUI);
   observeToolUiLocalization(dom.detailToolUI);
   renderToolDoc(tool);
