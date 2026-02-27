@@ -3249,11 +3249,12 @@ function buildOcrTool(container) {
 }
 
 function buildBgRemoveTool(container) {
+  const zh = state.lang === "zh";
   const row = document.createElement("div");
   row.className = "field-row";
   row.innerHTML = `
-    <label>背景色(HEX)<input id="bg" value="#ffffff" class="mono" /></label>
-    <label>容差(0-255)<input id="tol" type="number" value="42" min="0" max="255" /></label>
+    <label>${zh ? "背景色(HEX)" : "Background Color (HEX)"}<input id="bg" value="#ffffff" class="mono" /></label>
+    <label>${zh ? "容差(0-255)" : "Tolerance (0-255)"}<input id="tol" type="number" value="42" min="0" max="255" /></label>
   `;
   container.append(row);
   const file = document.createElement("input");
@@ -3262,20 +3263,20 @@ function buildBgRemoveTool(container) {
   container.append(file);
   const runBtn = document.createElement("button");
   runBtn.className = "btn";
-  runBtn.textContent = "去背景（纯色）";
+  runBtn.textContent = zh ? "去背景（纯色）" : "Remove Solid Background";
   container.append(runBtn);
   const result = createResultBox(container);
   result.classList.remove("mono");
   runBtn.onclick = () => {
     const f = file.files?.[0];
     if (!f) {
-      result.textContent = "请选择图片";
+      result.textContent = zh ? "请选择图片" : "Please choose an image";
       return;
     }
     const bg = hexToRgbObj(row.querySelector("#bg").value.trim());
     const tol = Number(row.querySelector("#tol").value);
     if (!bg) {
-      result.textContent = "背景色格式错误";
+      result.textContent = zh ? "背景色格式错误" : "Invalid background color format";
       return;
     }
     const fr = new FileReader();
@@ -3301,7 +3302,7 @@ function buildBgRemoveTool(container) {
           const a = document.createElement("a");
           a.href = url;
           a.download = "bg-removed.png";
-          a.textContent = "下载 PNG";
+          a.textContent = zh ? "下载 PNG" : "Download PNG";
           result.innerHTML = "";
           result.append(out, document.createElement("br"), a);
         }, "image/png");
@@ -4026,6 +4027,7 @@ function appendDownloadLink(container, blob, name, text = "下载文件") {
 }
 
 function buildImageRotateFlipTool(container) {
+  const zh = state.lang === "zh";
   const file = document.createElement("input");
   file.type = "file";
   file.accept = "image/*";
@@ -4033,7 +4035,7 @@ function buildImageRotateFlipTool(container) {
   const row = document.createElement("div");
   row.className = "field-row";
   row.innerHTML = `
-    <label>旋转
+    <label>${zh ? "旋转角度" : "Rotation"}
       <select id="rot">
         <option value="0">0°</option>
         <option value="90">90°</option>
@@ -4041,20 +4043,28 @@ function buildImageRotateFlipTool(container) {
         <option value="270">270°</option>
       </select>
     </label>
-    <label><input id="hf" type="checkbox" /> 水平翻转</label>
-    <label><input id="vf" type="checkbox" /> 垂直翻转</label>
   `;
+  const flipWrap = document.createElement("div");
+  flipWrap.style.display = "flex";
+  flipWrap.style.alignItems = "center";
+  flipWrap.style.gap = "0.9rem";
+  flipWrap.style.flexWrap = "wrap";
+  flipWrap.innerHTML = `
+    <label style="display:inline-flex;align-items:center;gap:0.35rem;"><input id="hf" type="checkbox" /> ${zh ? "水平翻转" : "Flip Horizontal"}</label>
+    <label style="display:inline-flex;align-items:center;gap:0.35rem;"><input id="vf" type="checkbox" /> ${zh ? "垂直翻转" : "Flip Vertical"}</label>
+  `;
+  row.append(flipWrap);
   container.append(row);
   const runBtn = document.createElement("button");
   runBtn.className = "btn";
-  runBtn.textContent = "处理并导出";
+  runBtn.textContent = zh ? "处理并导出" : "Process and Export";
   container.append(runBtn);
   const result = createResultBox(container);
   result.classList.remove("mono");
   runBtn.onclick = async () => {
     const f = file.files?.[0];
     if (!f) {
-      result.textContent = "请选择图片";
+      result.textContent = zh ? "请选择图片" : "Please choose an image";
       return;
     }
     const img = await loadImageFromFile(f);
@@ -4074,7 +4084,7 @@ function buildImageRotateFlipTool(container) {
     result.append(canvas);
     canvas.toBlob((blob) => {
       result.append(document.createElement("br"));
-      appendDownloadLink(result, blob, "rotated.png", "下载处理图");
+      appendDownloadLink(result, blob, "rotated.png", zh ? "下载处理图" : "Download Result");
     }, "image/png");
   };
 }
@@ -5094,6 +5104,7 @@ function buildVideoSnapshotTool(container) {
 }
 
 function buildVideoBrowserOpsTool(container, mode) {
+  const zh = state.lang === "zh";
   const file = document.createElement("input");
   file.type = "file";
   file.accept = "video/*";
@@ -5120,12 +5131,12 @@ function buildVideoBrowserOpsTool(container, mode) {
     defaults = `<label>目标宽度<input id="w" type="number" value="1280" min="320" step="2" /></label>
       <label>CRF(18-35)<input id="crf" type="number" value="28" min="18" max="35" /></label>`;
   } else if (mode === "rotate") {
-    defaults = `<label>旋转/翻转
+    defaults = `<label>${zh ? "旋转/翻转" : "Rotate / Flip"}
       <select id="rot">
-        <option value="transpose=1">顺时针 90°</option>
-        <option value="transpose=2">逆时针 90°</option>
-        <option value="hflip">水平翻转</option>
-        <option value="vflip">垂直翻转</option>
+        <option value="transpose=1">${zh ? "顺时针 90°" : "Rotate 90° CW"}</option>
+        <option value="transpose=2">${zh ? "逆时针 90°" : "Rotate 90° CCW"}</option>
+        <option value="hflip">${zh ? "水平翻转" : "Flip Horizontal"}</option>
+        <option value="vflip">${zh ? "垂直翻转" : "Flip Vertical"}</option>
       </select>
     </label>`;
   } else if (mode === "watermark") {
@@ -5146,12 +5157,14 @@ function buildVideoBrowserOpsTool(container, mode) {
 
   const note = document.createElement("p");
   note.className = "hint";
-  note.textContent = "视频处理在浏览器本地执行，首次会下载 FFmpeg 核心，处理大文件耗时较长。";
+  note.textContent = zh
+    ? "视频处理在浏览器本地执行，首次会下载 FFmpeg 核心，处理大文件耗时较长。"
+    : "Video processing runs in your browser. FFmpeg core is loaded on first use and large files take longer.";
   container.append(note);
 
   const btn = document.createElement("button");
   btn.className = "btn";
-  btn.textContent = "开始处理并导出";
+  btn.textContent = zh ? "开始处理并导出" : "Start Processing and Export";
   container.append(btn);
   const result = createResultBox(container);
   result.classList.remove("mono");
@@ -6316,16 +6329,6 @@ function renderToolDoc(tool) {
 }
 
 const TOOL_UI_ZH_EN = [
-  ["顺时针 90°", "Rotate 90° CW"],
-  ["逆时针 90°", "Rotate 90° CCW"],
-  ["水平翻转", "Flip horizontal"],
-  ["垂直翻转", "Flip vertical"],
-  ["旋转/翻转", "Rotate / Flip"],
-  ["背景色阈值", "Background threshold"],
-  ["背景色", "Background color"],
-  ["去背景", "Remove background"],
-  ["如 1-3,5", "e.g. 1-3,5"],
-  ["请输入", "Please enter "],
   ["转换为图片", "Convert to image"],
   ["图片转 PDF", "Image to PDF"],
   ["压缩并导出 PDF", "Compress and export PDF"],
@@ -6426,10 +6429,15 @@ function zhToEnText(text) {
   return out.replace(/\s{2,}/g, " ").trim();
 }
 
+function removeCjk(text) {
+  return String(text).replace(/[\u3400-\u9fff]/g, " ");
+}
+
 function toUiEnglish(text, fallback = "") {
   const replaced = zhToEnText(text);
   if (!/[\u3400-\u9fff]/.test(replaced)) return replaced;
-  return fallback || replaced;
+  const cleaned = removeCjk(replaced).replace(/\s{2,}/g, " ").trim();
+  return cleaned || fallback;
 }
 
 function localizeToolUiText(root) {
@@ -6448,6 +6456,8 @@ function localizeToolUiText(root) {
     const p = n.parentElement?.tagName || "";
     let fallback = "";
     if (p === "BUTTON") fallback = "Run";
+    else if (p === "OPTION") fallback = "Option";
+    else if (p === "LABEL") fallback = "Field";
     else if (p === "A") fallback = "Open";
     n.nodeValue = toUiEnglish(raw, fallback);
   });
