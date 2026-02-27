@@ -400,6 +400,20 @@ textarea {
   white-space: pre-wrap;
 }
 
+.file-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin: 0.32rem 0;
+}
+
+.file-picker__name {
+  font-size: 0.88rem;
+  color: var(--muted);
+  word-break: break-all;
+}
+
 .field-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
