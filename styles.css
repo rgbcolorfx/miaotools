@@ -366,6 +366,40 @@ textarea {
   padding: 0.96rem;
 }
 
+.tool-docs {
+  margin-top: 0.9rem;
+  border: 1px solid #dfd5c8;
+  border-radius: 13px;
+  background: #fff;
+  padding: 0.96rem;
+}
+
+.tool-docs h3 {
+  margin: 0.35rem 0 0.4rem;
+  font-size: 1rem;
+}
+
+.tool-docs p,
+.tool-docs li {
+  color: #253634;
+  line-height: 1.6;
+}
+
+.tool-docs ol,
+.tool-docs ul {
+  margin: 0.3rem 0 0.7rem 1.1rem;
+  padding: 0;
+}
+
+.tool-docs pre {
+  margin: 0.3rem 0 0.7rem;
+  background: #fffcf6;
+  border: 1px dashed #d9ceb9;
+  border-radius: 9px;
+  padding: 0.55rem 0.62rem;
+  white-space: pre-wrap;
+}
+
 .field-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -103,3 +103,5 @@ download_with_fallback \
   "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.wasm"
 
 echo "FFmpeg static assets prepared in: $TARGET_DIR"
+
+node scripts/generate-tool-pages.mjs

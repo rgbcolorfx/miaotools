@@ -16,6 +16,7 @@ const dom = {
   detailTitle: document.getElementById("detailTitle"),
   detailDesc: document.getElementById("detailDesc"),
   detailToolUI: document.getElementById("detailToolUI"),
+  detailSeoContent: document.getElementById("detailSeoContent"),
   backToList: document.getElementById("backToList"),
   toolCardTemplate: document.getElementById("toolCardTemplate"),
 };
@@ -238,8 +239,12 @@ function applyLocale() {
   renderSeoLinks();
 }
 
-function getSiteBaseUrl() {
-  return `${window.location.origin}${window.location.pathname}`;
+function getHomeUrl() {
+  return `${window.location.origin}/`;
+}
+
+function getToolUrl(id) {
+  return `${window.location.origin}/tool/${encodeURIComponent(id)}/`;
 }
 
 async function initVisitCounter() {
@@ -6166,7 +6171,7 @@ function renderSeoLinks() {
   dom.seoToolLinks.innerHTML = "";
   tools.forEach((tool) => {
     const a = document.createElement("a");
-    a.href = `?tool=${tool.id}`;
+    a.href = `/tool/${encodeURIComponent(tool.id)}/`;
     a.textContent = localizeToolTitle(tool);
     dom.seoToolLinks.append(a);
   });
@@ -6177,7 +6182,7 @@ function updateSeo(tool) {
   const siteDesc = t("siteDescription");
   const pageTitle = tool ? `${localizeToolTitle(tool)} | MiaoTools` : baseTitle;
   const pageDesc = tool ? localizeToolDescription(tool) : siteDesc;
-  const url = tool ? `${getSiteBaseUrl()}?tool=${encodeURIComponent(tool.id)}` : getSiteBaseUrl();
+  const url = tool ? getToolUrl(tool.id) : getHomeUrl();
 
   document.title = pageTitle;
   const setMeta = (selector, attr, value) => {
@@ -6191,17 +6196,142 @@ function updateSeo(tool) {
   setMeta("#ogUrl", "content", url);
   setMeta("#twitterTitle", "content", pageTitle);
   setMeta("#twitterDescription", "content", pageDesc);
+  const ldTool = document.getElementById("ldTool");
+  if (ldTool) {
+    if (tool) {
+      const doc = getToolDoc(tool);
+      ldTool.textContent = JSON.stringify(
+        {
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "SoftwareApplication",
+              name: localizeToolTitle(tool),
+              applicationCategory: localizeCategory(tool.category),
+              operatingSystem: "Any",
+              offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+              description: localizeToolDescription(tool),
+              url,
+            },
+            {
+              "@type": "HowTo",
+              name: `${localizeToolTitle(tool)} usage`,
+              description: doc.purpose,
+              step: doc.steps.map((s) => ({ "@type": "HowToStep", text: s })),
+            },
+          ],
+        },
+        null,
+        2,
+      );
+    } else {
+      ldTool.textContent = "{}";
+    }
+  }
+}
+
+function getToolDoc(tool) {
+  const title = localizeToolTitle(tool);
+  const category = localizeCategory(tool.category);
+  const zh = state.lang === "zh";
+  const purpose = zh
+    ? `${title}用于快速完成${tool.description}。该工具为纯前端处理，数据默认在浏览器本地运行，适合日常办公与开发场景。`
+    : `${title} helps you ${localizeToolDescription(tool).toLowerCase()}. It runs in the browser and is suitable for daily work.`;
+  const stepMapZh = {
+    图像工具: ["选择图片文件", "填写参数并点击处理", "预览结果并下载"],
+    视频工具: ["选择视频文件", "设置处理参数并开始处理", "等待完成后下载结果文件"],
+    音频工具: ["上传音频文件", "设置时间或音量等参数", "处理完成后下载输出"],
+    文档办公: ["上传文档文件", "配置页面/格式/内容参数", "生成并下载文档结果"],
+    开发工具: ["输入原始内容", "设置规则或格式选项", "复制或下载处理结果"],
+  };
+  const defaultStepsZh = ["输入或上传原始数据", "按需调整参数后执行", "检查结果并导出"];
+  const stepsZh = stepMapZh[tool.category] || defaultStepsZh;
+  const stepsEn = [
+    "Provide source input or upload file",
+    "Configure options and run processing",
+    "Review output and export result",
+  ];
+  let exampleInput = "";
+  let exampleOutput = "";
+  if (tool.id.includes("json")) {
+    exampleInput = '{"name":"miao","age":18}';
+    exampleOutput = '{\n  "name": "miao",\n  "age": 18\n}';
+  } else if (tool.id.includes("base64")) {
+    exampleInput = "hello";
+    exampleOutput = "aGVsbG8=";
+  } else if (tool.id.includes("timestamp")) {
+    exampleInput = "1700000000";
+    exampleOutput = "2023-11-14 22:13:20";
+  } else if (tool.id.includes("qr")) {
+    exampleInput = "https://miaotools.top";
+    exampleOutput = zh ? "生成二维码图片并下载" : "QR image generated";
+  } else if (tool.category === "文档办公") {
+    exampleInput = zh ? "上传 PDF，页码输入 1-3,5" : "Upload PDF, page range 1-3,5";
+    exampleOutput = zh ? "导出处理后的文档文件" : "Processed document exported";
+  } else {
+    exampleInput = zh ? "输入示例数据或上传示例文件" : "Sample input data or file";
+    exampleOutput = zh ? "得到处理后的目标结果" : "Processed output result";
+  }
+  const tips = zh
+    ? ["建议先用小文件测试参数", "涉及隐私内容时建议在可信设备上使用", "处理大文件时请保持页面不关闭"]
+    : ["Test with small input first", "Use trusted device for sensitive data", "Keep page open for large files"];
+  const faqQ = zh ? `${title}是免费的吗？` : `Is ${title} free to use?`;
+  const faqA = zh ? "是，当前提供的在线功能可免费使用。" : "Yes. Current online features are free.";
+  return {
+    purpose,
+    steps: zh ? stepsZh : stepsEn,
+    exampleInput,
+    exampleOutput,
+    tips,
+    faqQ,
+    faqA,
+    labels: zh
+      ? { usage: "工具作用", steps: "使用步骤", ex: "示例", in: "输入", out: "输出", tips: "注意事项", faq: "常见问题" }
+      : { usage: "What It Does", steps: "How To Use", ex: "Example", in: "Input", out: "Output", tips: "Notes", faq: "FAQ" },
+  };
+}
+
+function renderToolDoc(tool) {
+  const doc = getToolDoc(tool);
+  dom.detailSeoContent.innerHTML = "";
+  const labels = doc.labels;
+  const sec = document.createElement("div");
+  sec.innerHTML = `
+    <h3>${labels.usage}</h3>
+    <p>${doc.purpose}</p>
+    <h3>${labels.steps}</h3>
+    <ol>${doc.steps.map((s) => `<li>${s}</li>`).join("")}</ol>
+    <h3>${labels.ex}</h3>
+    <p><strong>${labels.in}:</strong></p>
+    <pre class="mono">${escapeHtml(doc.exampleInput)}</pre>
+    <p><strong>${labels.out}:</strong></p>
+    <pre class="mono">${escapeHtml(doc.exampleOutput)}</pre>
+    <h3>${labels.tips}</h3>
+    <ul>${doc.tips.map((t) => `<li>${t}</li>`).join("")}</ul>
+    <h3>${labels.faq}</h3>
+    <p><strong>Q:</strong> ${doc.faqQ}</p>
+    <p><strong>A:</strong> ${doc.faqA}</p>
+  `;
+  dom.detailSeoContent.append(sec);
 }
 
 function getCurrentToolId() {
   const p = new URLSearchParams(window.location.search);
-  return p.get("tool") || "";
+  const fromQuery = p.get("tool") || "";
+  if (fromQuery) return fromQuery;
+  const match = window.location.pathname.match(/^\/tool\/([^/]+)\/?$/);
+  return match ? decodeURIComponent(match[1]) : "";
 }
 
 function setCurrentTool(id, push = true) {
   const url = new URL(window.location.href);
-  if (id) url.searchParams.set("tool", id);
-  else url.searchParams.delete("tool");
+  if (id) {
+    url.pathname = `/tool/${encodeURIComponent(id)}/`;
+    url.searchParams.delete("tool");
+  } else {
+    url.pathname = "/";
+    url.search = "";
+  }
   if (push) window.history.pushState({}, "", url);
   else window.history.replaceState({}, "", url);
   render();
@@ -6317,6 +6447,7 @@ function renderDetail(tool) {
   dom.detailDesc.textContent = localizeToolDescription(tool);
   dom.detailToolUI.innerHTML = "";
   tool.builder(dom.detailToolUI);
+  renderToolDoc(tool);
 }
 
 function render() {
