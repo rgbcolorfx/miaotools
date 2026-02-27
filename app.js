@@ -890,17 +890,18 @@ function buildColorTool(container) {
 }
 
 function buildFuelTool(container) {
+  const zh = state.lang === "zh";
   const row = document.createElement("div");
   row.className = "field-row";
   row.innerHTML = `
-    <label>油价 (元/升)<input id="price" type="number" step="0.01" value="8.20" /></label>
-    <label>加油金额 (元)<input id="amount" type="number" step="0.01" value="200" /></label>
-    <label>行驶里程 (公里)<input id="distance" type="number" step="0.1" value="300" /></label>
+    <label>${zh ? "油价 (元/升)" : "Fuel price (currency/L)"}<input id="price" type="number" step="0.01" value="8.20" /></label>
+    <label>${zh ? "加油金额 (元)" : "Fuel spend (currency)"}<input id="amount" type="number" step="0.01" value="200" /></label>
+    <label>${zh ? "行驶里程 (公里)" : "Distance (km)"}<input id="distance" type="number" step="0.1" value="300" /></label>
   `;
   container.append(row);
   const runBtn = document.createElement("button");
   runBtn.className = "btn";
-  runBtn.textContent = "计算油耗";
+  runBtn.textContent = zh ? "计算油耗" : "Calculate Fuel";
   container.append(runBtn);
   const result = createResultBox(container);
 
@@ -909,27 +910,30 @@ function buildFuelTool(container) {
     const amount = Number(row.querySelector("#amount").value);
     const distance = Number(row.querySelector("#distance").value);
     if (price <= 0 || amount <= 0 || distance <= 0) {
-      result.textContent = "请输入大于 0 的数值";
+      result.textContent = zh ? "请输入大于 0 的数值" : "Please enter values greater than 0";
       return;
     }
     const liters = amount / price;
     const l100 = (liters / distance) * 100;
     const costPerKm = amount / distance;
-    result.textContent = `加油量: ${liters.toFixed(3)} L\n百公里油耗: ${l100.toFixed(2)} L/100km\n每公里油费: ${costPerKm.toFixed(3)} 元/km`;
+    result.textContent = zh
+      ? `加油量: ${liters.toFixed(3)} L\n百公里油耗: ${l100.toFixed(2)} L/100km\n每公里油费: ${costPerKm.toFixed(3)} 元/km`
+      : `Fuel volume: ${liters.toFixed(3)} L\nFuel consumption: ${l100.toFixed(2)} L/100km\nCost per km: ${costPerKm.toFixed(3)}/km`;
   };
 }
 
 function buildBmiTool(container) {
+  const zh = state.lang === "zh";
   const row = document.createElement("div");
   row.className = "field-row";
   row.innerHTML = `
-    <label>身高 (cm)<input id="height" type="number" step="0.1" value="170" /></label>
-    <label>体重 (kg)<input id="weight" type="number" step="0.1" value="65" /></label>
+    <label>${zh ? "身高 (cm)" : "Height (cm)"}<input id="height" type="number" step="0.1" value="170" /></label>
+    <label>${zh ? "体重 (kg)" : "Weight (kg)"}<input id="weight" type="number" step="0.1" value="65" /></label>
   `;
   container.append(row);
   const runBtn = document.createElement("button");
   runBtn.className = "btn";
-  runBtn.textContent = "计算 BMI";
+  runBtn.textContent = zh ? "计算 BMI" : "Calculate BMI";
   container.append(runBtn);
   const result = createResultBox(container);
 
@@ -937,38 +941,39 @@ function buildBmiTool(container) {
     const hCm = Number(row.querySelector("#height").value);
     const w = Number(row.querySelector("#weight").value);
     if (hCm <= 0 || w <= 0) {
-      result.textContent = "请输入有效身高和体重";
+      result.textContent = zh ? "请输入有效身高和体重" : "Please enter valid height and weight";
       return;
     }
     const h = hCm / 100;
     const bmi = w / (h * h);
-    let level = "正常";
-    if (bmi < 18.5) level = "偏瘦";
-    if (bmi >= 24 && bmi < 28) level = "超重";
-    if (bmi >= 28) level = "肥胖";
-    result.textContent = `BMI: ${bmi.toFixed(2)}\n判定: ${level}`;
+    let level = zh ? "正常" : "Normal";
+    if (bmi < 18.5) level = zh ? "偏瘦" : "Underweight";
+    if (bmi >= 24 && bmi < 28) level = zh ? "超重" : "Overweight";
+    if (bmi >= 28) level = zh ? "肥胖" : "Obese";
+    result.textContent = zh ? `BMI: ${bmi.toFixed(2)}\n判定: ${level}` : `BMI: ${bmi.toFixed(2)}\nCategory: ${level}`;
   };
 }
 
 function buildAgeTool(container) {
+  const zh = state.lang === "zh";
   const birth = document.createElement("input");
   birth.type = "date";
   container.append(birth);
   const runBtn = document.createElement("button");
   runBtn.className = "btn";
-  runBtn.textContent = "计算年龄";
+  runBtn.textContent = zh ? "计算年龄" : "Calculate Age";
   container.append(runBtn);
   const result = createResultBox(container);
 
   runBtn.onclick = () => {
     if (!birth.value) {
-      result.textContent = "请选择出生日期";
+      result.textContent = zh ? "请选择出生日期" : "Please choose birth date";
       return;
     }
     const b = new Date(`${birth.value}T00:00:00`);
     const now = new Date();
     if (b > now) {
-      result.textContent = "出生日期不能晚于今天";
+      result.textContent = zh ? "出生日期不能晚于今天" : "Birth date cannot be in the future";
       return;
     }
     let years = now.getFullYear() - b.getFullYear();
@@ -983,21 +988,22 @@ function buildAgeTool(container) {
       years -= 1;
       months += 12;
     }
-    result.textContent = `年龄: ${years} 岁 ${months} 月 ${days} 天`;
+    result.textContent = zh ? `年龄: ${years} 岁 ${months} 月 ${days} 天` : `Age: ${years}y ${months}m ${days}d`;
   };
 }
 
 function buildDateDiffTool(container) {
+  const zh = state.lang === "zh";
   const row = document.createElement("div");
   row.className = "field-row";
   row.innerHTML = `
-    <label>开始日期<input id="start" type="date" /></label>
-    <label>结束日期<input id="end" type="date" /></label>
+    <label>${zh ? "开始日期" : "Start date"}<input id="start" type="date" /></label>
+    <label>${zh ? "结束日期" : "End date"}<input id="end" type="date" /></label>
   `;
   container.append(row);
   const runBtn = document.createElement("button");
   runBtn.className = "btn";
-  runBtn.textContent = "计算日期差";
+  runBtn.textContent = zh ? "计算日期差" : "Calculate Date Difference";
   container.append(runBtn);
   const result = createResultBox(container);
 
@@ -1005,7 +1011,7 @@ function buildDateDiffTool(container) {
     const s = row.querySelector("#start").value;
     const e = row.querySelector("#end").value;
     if (!s || !e) {
-      result.textContent = "请填写开始和结束日期";
+      result.textContent = zh ? "请填写开始和结束日期" : "Please fill start and end date";
       return;
     }
     const start = new Date(`${s}T00:00:00`);
@@ -1013,53 +1019,55 @@ function buildDateDiffTool(container) {
     const diff = end.getTime() - start.getTime();
     const sign = diff >= 0 ? 1 : -1;
     const days = Math.floor(Math.abs(diff) / 86400000);
-    result.textContent = `相差: ${sign * days} 天`;
+    result.textContent = zh ? `相差: ${sign * days} 天` : `Difference: ${sign * days} days`;
   };
 }
 
 function buildCountdownTool(container) {
+  const zh = state.lang === "zh";
   const target = document.createElement("input");
   target.type = "datetime-local";
   container.append(target);
   const runBtn = document.createElement("button");
   runBtn.className = "btn";
-  runBtn.textContent = "计算倒计时";
+  runBtn.textContent = zh ? "计算倒计时" : "Calculate Countdown";
   container.append(runBtn);
   const result = createResultBox(container);
 
   runBtn.onclick = () => {
     if (!target.value) {
-      result.textContent = "请选择目标时间";
+      result.textContent = zh ? "请选择目标时间" : "Please choose target time";
       return;
     }
     const now = Date.now();
     const t = new Date(target.value).getTime();
     const diff = t - now;
     if (diff <= 0) {
-      result.textContent = "目标时间已到或已过";
+      result.textContent = zh ? "目标时间已到或已过" : "Target time has passed";
       return;
     }
     const days = Math.floor(diff / 86400000);
     const hours = Math.floor((diff % 86400000) / 3600000);
     const mins = Math.floor((diff % 3600000) / 60000);
     const secs = Math.floor((diff % 60000) / 1000);
-    result.textContent = `剩余: ${days} 天 ${hours} 小时 ${mins} 分 ${secs} 秒`;
+    result.textContent = zh ? `剩余: ${days} 天 ${hours} 小时 ${mins} 分 ${secs} 秒` : `Remaining: ${days}d ${hours}h ${mins}m ${secs}s`;
   };
 }
 
 function buildPercentTool(container) {
+  const zh = state.lang === "zh";
   const row = document.createElement("div");
   row.className = "field-row";
   row.innerHTML = `
-    <label>部分值<input id="part" type="number" step="0.01" value="30" /></label>
-    <label>整体值<input id="whole" type="number" step="0.01" value="120" /></label>
-    <label>原值<input id="old" type="number" step="0.01" value="80" /></label>
-    <label>新值<input id="new" type="number" step="0.01" value="100" /></label>
+    <label>${zh ? "部分值" : "Part value"}<input id="part" type="number" step="0.01" value="30" /></label>
+    <label>${zh ? "整体值" : "Whole value"}<input id="whole" type="number" step="0.01" value="120" /></label>
+    <label>${zh ? "原值" : "Original value"}<input id="old" type="number" step="0.01" value="80" /></label>
+    <label>${zh ? "新值" : "New value"}<input id="new" type="number" step="0.01" value="100" /></label>
   `;
   container.append(row);
   const runBtn = document.createElement("button");
   runBtn.className = "btn";
-  runBtn.textContent = "计算百分比";
+  runBtn.textContent = zh ? "计算百分比" : "Calculate Percentage";
   container.append(runBtn);
   const result = createResultBox(container);
 
@@ -1069,26 +1077,27 @@ function buildPercentTool(container) {
     const oldVal = Number(row.querySelector("#old").value);
     const newVal = Number(row.querySelector("#new").value);
     if (whole === 0 || oldVal === 0) {
-      result.textContent = "整体值和原值不能为 0";
+      result.textContent = zh ? "整体值和原值不能为 0" : "Whole value and original value cannot be 0";
       return;
     }
     const ratio = (part / whole) * 100;
     const change = ((newVal - oldVal) / oldVal) * 100;
-    result.textContent = `占比: ${ratio.toFixed(2)}%\n变化率: ${change.toFixed(2)}%`;
+    result.textContent = zh ? `占比: ${ratio.toFixed(2)}%\n变化率: ${change.toFixed(2)}%` : `Ratio: ${ratio.toFixed(2)}%\nChange rate: ${change.toFixed(2)}%`;
   };
 }
 
 function buildUnitPriceTool(container) {
+  const zh = state.lang === "zh";
   const row = document.createElement("div");
   row.className = "field-row";
   row.innerHTML = `
-    <label>总价 (元)<input id="price" type="number" step="0.01" value="59.9" /></label>
-    <label>数量<input id="qty" type="number" step="0.01" value="3" /></label>
+    <label>${zh ? "总价 (元)" : "Total price"}<input id="price" type="number" step="0.01" value="59.9" /></label>
+    <label>${zh ? "数量" : "Quantity"}<input id="qty" type="number" step="0.01" value="3" /></label>
   `;
   container.append(row);
   const runBtn = document.createElement("button");
   runBtn.className = "btn";
-  runBtn.textContent = "计算单价";
+  runBtn.textContent = zh ? "计算单价" : "Calculate Unit Price";
   container.append(runBtn);
   const result = createResultBox(container);
 
@@ -1096,10 +1105,10 @@ function buildUnitPriceTool(container) {
     const price = Number(row.querySelector("#price").value);
     const qty = Number(row.querySelector("#qty").value);
     if (qty <= 0) {
-      result.textContent = "数量必须大于 0";
+      result.textContent = zh ? "数量必须大于 0" : "Quantity must be greater than 0";
       return;
     }
-    result.textContent = `单价: ${(price / qty).toFixed(4)} 元`;
+    result.textContent = zh ? `单价: ${(price / qty).toFixed(4)} 元` : `Unit price: ${(price / qty).toFixed(4)}`;
   };
 }
 
@@ -1183,18 +1192,19 @@ function calcEqualPrincipal(principal, monthlyRate, months) {
 }
 
 function buildCompoundInterestTool(container) {
+  const zh = state.lang === "zh";
   const row = document.createElement("div");
   row.className = "field-row";
   row.innerHTML = `
-    <label>初始本金 (元)<input id="principal" type="number" step="100" value="100000" /></label>
-    <label>每月追加 (元)<input id="monthly" type="number" step="100" value="2000" /></label>
-    <label>年化收益率 (%)<input id="rate" type="number" step="0.01" value="6" /></label>
-    <label>投资年限 (年)<input id="years" type="number" step="1" value="10" /></label>
+    <label>${zh ? "初始本金 (元)" : "Initial principal"}<input id="principal" type="number" step="100" value="100000" /></label>
+    <label>${zh ? "每月追加 (元)" : "Monthly contribution"}<input id="monthly" type="number" step="100" value="2000" /></label>
+    <label>${zh ? "年化收益率 (%)" : "Annual return (%)"}<input id="rate" type="number" step="0.01" value="6" /></label>
+    <label>${zh ? "投资年限 (年)" : "Years"}<input id="years" type="number" step="1" value="10" /></label>
   `;
   container.append(row);
   const runBtn = document.createElement("button");
   runBtn.className = "btn";
-  runBtn.textContent = "计算复利";
+  runBtn.textContent = zh ? "计算复利" : "Calculate Compound";
   container.append(runBtn);
   const result = createResultBox(container);
 
@@ -1204,7 +1214,7 @@ function buildCompoundInterestTool(container) {
     const annualRate = Number(row.querySelector("#rate").value) / 100;
     const years = Number(row.querySelector("#years").value);
     if (principal < 0 || monthly < 0 || years <= 0 || annualRate < 0) {
-      result.textContent = "请输入有效参数";
+      result.textContent = zh ? "请输入有效参数" : "Please enter valid parameters";
       return;
     }
     const n = Math.round(years * 12);
@@ -1213,23 +1223,26 @@ function buildCompoundInterestTool(container) {
     const fvMonthly = r === 0 ? monthly * n : monthly * (((1 + r) ** n - 1) / r);
     const finalValue = fvPrincipal + fvMonthly;
     const invested = principal + monthly * n;
-    result.textContent = `投入本金: ${invested.toFixed(2)} 元\n期末总资产: ${finalValue.toFixed(2)} 元\n总收益: ${(finalValue - invested).toFixed(2)} 元`;
+    result.textContent = zh
+      ? `投入本金: ${invested.toFixed(2)} 元\n期末总资产: ${finalValue.toFixed(2)} 元\n总收益: ${(finalValue - invested).toFixed(2)} 元`
+      : `Total invested: ${invested.toFixed(2)}\nFinal value: ${finalValue.toFixed(2)}\nProfit: ${(finalValue - invested).toFixed(2)}`;
   };
 }
 
 function buildDcaTool(container) {
+  const zh = state.lang === "zh";
   const row = document.createElement("div");
   row.className = "field-row";
   row.innerHTML = `
-    <label>每月定投 (元)<input id="monthly" type="number" step="100" value="1000" /></label>
-    <label>年化收益率 (%)<input id="rate" type="number" step="0.01" value="8" /></label>
-    <label>投资年限 (年)<input id="years" type="number" value="10" /></label>
-    <label>每年递增 (%)<input id="increase" type="number" step="0.1" value="0" /></label>
+    <label>${zh ? "每月定投 (元)" : "Monthly DCA"}<input id="monthly" type="number" step="100" value="1000" /></label>
+    <label>${zh ? "年化收益率 (%)" : "Annual return (%)"}<input id="rate" type="number" step="0.01" value="8" /></label>
+    <label>${zh ? "投资年限 (年)" : "Years"}<input id="years" type="number" value="10" /></label>
+    <label>${zh ? "每年递增 (%)" : "Yearly increase (%)"}<input id="increase" type="number" step="0.1" value="0" /></label>
   `;
   container.append(row);
   const runBtn = document.createElement("button");
   runBtn.className = "btn";
-  runBtn.textContent = "计算定投";
+  runBtn.textContent = zh ? "计算定投" : "Calculate DCA";
   container.append(runBtn);
   const result = createResultBox(container);
 
@@ -1239,7 +1252,7 @@ function buildDcaTool(container) {
     const years = Number(row.querySelector("#years").value);
     const increase = Number(row.querySelector("#increase").value) / 100;
     if (monthly <= 0 || annualRate < 0 || years <= 0 || increase < 0) {
-      result.textContent = "请输入有效参数";
+      result.textContent = zh ? "请输入有效参数" : "Please enter valid parameters";
       return;
     }
     const r = annualRate / 12;
@@ -1252,22 +1265,25 @@ function buildDcaTool(container) {
       }
       monthly *= 1 + increase;
     }
-    result.textContent = `累计投入: ${invested.toFixed(2)} 元\n期末资产: ${value.toFixed(2)} 元\n收益: ${(value - invested).toFixed(2)} 元`;
+    result.textContent = zh
+      ? `累计投入: ${invested.toFixed(2)} 元\n期末资产: ${value.toFixed(2)} 元\n收益: ${(value - invested).toFixed(2)} 元`
+      : `Total invested: ${invested.toFixed(2)}\nFinal value: ${value.toFixed(2)}\nProfit: ${(value - invested).toFixed(2)}`;
   };
 }
 
 function buildReturnRateTool(container) {
+  const zh = state.lang === "zh";
   const row = document.createElement("div");
   row.className = "field-row";
   row.innerHTML = `
-    <label>初始金额 (元)<input id="start" type="number" step="0.01" value="10000" /></label>
-    <label>当前金额 (元)<input id="end" type="number" step="0.01" value="12500" /></label>
-    <label>持有年限 (年，可选)<input id="years" type="number" step="0.01" value="2" /></label>
+    <label>${zh ? "初始金额 (元)" : "Initial amount"}<input id="start" type="number" step="0.01" value="10000" /></label>
+    <label>${zh ? "当前金额 (元)" : "Current amount"}<input id="end" type="number" step="0.01" value="12500" /></label>
+    <label>${zh ? "持有年限 (年，可选)" : "Holding years (optional)"}<input id="years" type="number" step="0.01" value="2" /></label>
   `;
   container.append(row);
   const runBtn = document.createElement("button");
   runBtn.className = "btn";
-  runBtn.textContent = "计算收益率";
+  runBtn.textContent = zh ? "计算收益率" : "Calculate Return";
   container.append(runBtn);
   const result = createResultBox(container);
 
@@ -1276,36 +1292,37 @@ function buildReturnRateTool(container) {
     const end = Number(row.querySelector("#end").value);
     const years = Number(row.querySelector("#years").value);
     if (start <= 0 || end < 0) {
-      result.textContent = "请输入有效金额";
+      result.textContent = zh ? "请输入有效金额" : "Please enter valid amounts";
       return;
     }
     const total = ((end - start) / start) * 100;
-    let annualized = "未计算";
+    let annualized = zh ? "未计算" : "N/A";
     if (years > 0) {
       annualized = `${(((end / start) ** (1 / years) - 1) * 100).toFixed(4)}%`;
     }
-    result.textContent = `总收益率: ${total.toFixed(2)}%\n年化收益率: ${annualized}`;
+    result.textContent = zh ? `总收益率: ${total.toFixed(2)}%\n年化收益率: ${annualized}` : `Total return: ${total.toFixed(2)}%\nAnnualized return: ${annualized}`;
   };
 }
 
 function buildLoanFinanceTool(container) {
+  const zh = state.lang === "zh";
   const row = document.createElement("div");
   row.className = "field-row";
   row.innerHTML = `
-    <label>贷款金额 (元)<input id="principal" type="number" step="1000" value="500000" /></label>
-    <label>年利率 (%)<input id="rate" type="number" step="0.01" value="3.95" /></label>
-    <label>期限 (年)<input id="years" type="number" value="30" /></label>
-    <label>还款方式
+    <label>${zh ? "贷款金额 (元)" : "Loan principal"}<input id="principal" type="number" step="1000" value="500000" /></label>
+    <label>${zh ? "年利率 (%)" : "Annual interest (%)"}<input id="rate" type="number" step="0.01" value="3.95" /></label>
+    <label>${zh ? "期限 (年)" : "Term (years)"}<input id="years" type="number" value="30" /></label>
+    <label>${zh ? "还款方式" : "Repayment method"}
       <select id="method">
-        <option value="equal_installment">等额本息</option>
-        <option value="equal_principal">等额本金</option>
+        <option value="equal_installment">${zh ? "等额本息" : "Equal installment"}</option>
+        <option value="equal_principal">${zh ? "等额本金" : "Equal principal"}</option>
       </select>
     </label>
   `;
   container.append(row);
   const runBtn = document.createElement("button");
   runBtn.className = "btn";
-  runBtn.textContent = "计算贷款";
+  runBtn.textContent = zh ? "计算贷款" : "Calculate Loan";
   container.append(runBtn);
   const result = createResultBox(container);
 
@@ -1315,41 +1332,46 @@ function buildLoanFinanceTool(container) {
     const years = Number(row.querySelector("#years").value);
     const method = row.querySelector("#method").value;
     if (principal <= 0 || annualRate < 0 || years <= 0) {
-      result.textContent = "请输入有效参数";
+      result.textContent = zh ? "请输入有效参数" : "Please enter valid parameters";
       return;
     }
     const n = Math.round(years * 12);
     const r = annualRate / 12;
     if (method === "equal_installment") {
       const m = calcEqualInstallment(principal, r, n);
-      result.textContent = `方式: 等额本息\n月供: ${m.monthly.toFixed(2)} 元\n总还款: ${m.total.toFixed(2)} 元\n总利息: ${m.interest.toFixed(2)} 元`;
+      result.textContent = zh
+        ? `方式: 等额本息\n月供: ${m.monthly.toFixed(2)} 元\n总还款: ${m.total.toFixed(2)} 元\n总利息: ${m.interest.toFixed(2)} 元`
+        : `Method: Equal installment\nMonthly payment: ${m.monthly.toFixed(2)}\nTotal payment: ${m.total.toFixed(2)}\nTotal interest: ${m.interest.toFixed(2)}`;
     } else {
       const m = calcEqualPrincipal(principal, r, n);
-      result.textContent = `方式: 等额本金\n首月还款: ${m.first.toFixed(2)} 元\n末月还款: ${m.last.toFixed(2)} 元\n每月递减: ${m.decrease.toFixed(2)} 元\n总还款: ${m.total.toFixed(2)} 元\n总利息: ${m.interest.toFixed(2)} 元`;
+      result.textContent = zh
+        ? `方式: 等额本金\n首月还款: ${m.first.toFixed(2)} 元\n末月还款: ${m.last.toFixed(2)} 元\n每月递减: ${m.decrease.toFixed(2)} 元\n总还款: ${m.total.toFixed(2)} 元\n总利息: ${m.interest.toFixed(2)} 元`
+        : `Method: Equal principal\nFirst month: ${m.first.toFixed(2)}\nLast month: ${m.last.toFixed(2)}\nMonthly decrease: ${m.decrease.toFixed(2)}\nTotal payment: ${m.total.toFixed(2)}\nTotal interest: ${m.interest.toFixed(2)}`;
     }
   };
 }
 
 function buildMortgageTool(container) {
+  const zh = state.lang === "zh";
   const row = document.createElement("div");
   row.className = "field-row";
   row.innerHTML = `
-    <label>商贷金额 (元)<input id="bizPrincipal" type="number" step="1000" value="800000" /></label>
-    <label>商贷利率 (%)<input id="bizRate" type="number" step="0.01" value="3.95" /></label>
-    <label>公积金金额 (元)<input id="fundPrincipal" type="number" step="1000" value="300000" /></label>
-    <label>公积金利率 (%)<input id="fundRate" type="number" step="0.01" value="2.85" /></label>
-    <label>期限 (年)<input id="years" type="number" value="30" /></label>
-    <label>还款方式
+    <label>${zh ? "商贷金额 (元)" : "Commercial loan"}<input id="bizPrincipal" type="number" step="1000" value="800000" /></label>
+    <label>${zh ? "商贷利率 (%)" : "Commercial rate (%)"}<input id="bizRate" type="number" step="0.01" value="3.95" /></label>
+    <label>${zh ? "公积金金额 (元)" : "Fund loan"}<input id="fundPrincipal" type="number" step="1000" value="300000" /></label>
+    <label>${zh ? "公积金利率 (%)" : "Fund rate (%)"}<input id="fundRate" type="number" step="0.01" value="2.85" /></label>
+    <label>${zh ? "期限 (年)" : "Term (years)"}<input id="years" type="number" value="30" /></label>
+    <label>${zh ? "还款方式" : "Repayment method"}
       <select id="method">
-        <option value="equal_installment">等额本息</option>
-        <option value="equal_principal">等额本金</option>
+        <option value="equal_installment">${zh ? "等额本息" : "Equal installment"}</option>
+        <option value="equal_principal">${zh ? "等额本金" : "Equal principal"}</option>
       </select>
     </label>
   `;
   container.append(row);
   const runBtn = document.createElement("button");
   runBtn.className = "btn";
-  runBtn.textContent = "计算房贷";
+  runBtn.textContent = zh ? "计算房贷" : "Calculate Mortgage";
   container.append(runBtn);
   const result = createResultBox(container);
 
@@ -1362,7 +1384,7 @@ function buildMortgageTool(container) {
     const method = row.querySelector("#method").value;
 
     if (bizPrincipal < 0 || fundPrincipal < 0 || years <= 0 || bizRate < 0 || fundRate < 0) {
-      result.textContent = "请输入有效参数";
+      result.textContent = zh ? "请输入有效参数" : "Please enter valid parameters";
       return;
     }
 
@@ -1373,7 +1395,9 @@ function buildMortgageTool(container) {
       const monthly = biz.monthly + fund.monthly;
       const total = biz.total + fund.total;
       const interest = biz.interest + fund.interest;
-      result.textContent = `方式: 等额本息 (组合贷款)\n月供: ${monthly.toFixed(2)} 元\n总还款: ${total.toFixed(2)} 元\n总利息: ${interest.toFixed(2)} 元`;
+      result.textContent = zh
+        ? `方式: 等额本息 (组合贷款)\n月供: ${monthly.toFixed(2)} 元\n总还款: ${total.toFixed(2)} 元\n总利息: ${interest.toFixed(2)} 元`
+        : `Method: Equal installment (combined loan)\nMonthly payment: ${monthly.toFixed(2)}\nTotal payment: ${total.toFixed(2)}\nTotal interest: ${interest.toFixed(2)}`;
     } else {
       const biz = calcEqualPrincipal(bizPrincipal, bizRate, n);
       const fund = calcEqualPrincipal(fundPrincipal, fundRate, n);
@@ -1382,7 +1406,9 @@ function buildMortgageTool(container) {
       const decrease = biz.decrease + fund.decrease;
       const total = biz.total + fund.total;
       const interest = biz.interest + fund.interest;
-      result.textContent = `方式: 等额本金 (组合贷款)\n首月还款: ${first.toFixed(2)} 元\n末月还款: ${last.toFixed(2)} 元\n每月递减: ${decrease.toFixed(2)} 元\n总还款: ${total.toFixed(2)} 元\n总利息: ${interest.toFixed(2)} 元`;
+      result.textContent = zh
+        ? `方式: 等额本金 (组合贷款)\n首月还款: ${first.toFixed(2)} 元\n末月还款: ${last.toFixed(2)} 元\n每月递减: ${decrease.toFixed(2)} 元\n总还款: ${total.toFixed(2)} 元\n总利息: ${interest.toFixed(2)} 元`
+        : `Method: Equal principal (combined loan)\nFirst month: ${first.toFixed(2)}\nLast month: ${last.toFixed(2)}\nMonthly decrease: ${decrease.toFixed(2)}\nTotal payment: ${total.toFixed(2)}\nTotal interest: ${interest.toFixed(2)}`;
     }
   };
 }
