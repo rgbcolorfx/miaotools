@@ -6316,6 +6316,23 @@ function renderToolDoc(tool) {
 }
 
 const TOOL_UI_ZH_EN = [
+  ["转换为图片", "Convert to image"],
+  ["图片转 PDF", "Image to PDF"],
+  ["压缩并导出 PDF", "Compress and export PDF"],
+  ["提取全文文本", "Extract full text"],
+  ["按页提取", "Extract pages"],
+  ["重排页码", "Reorder pages"],
+  ["删除页码", "Delete pages"],
+  ["添加水印", "Add watermark"],
+  ["缩放", "Scale"],
+  ["请选择 PDF", "Please select PDF"],
+  ["请选择图片", "Please select image"],
+  ["请选择文件", "Please select file"],
+  ["请选择音频", "Please select audio"],
+  ["请选择视频", "Please select video"],
+  ["请选择多个 PDF", "Please select multiple PDFs"],
+  ["请选择 PDF 文件", "Please select PDF file"],
+  ["请选择 JPG 图片", "Please select JPG image"],
   ["请选择", "Please select"],
   ["选择", "Select"],
   ["输入", "Input"],
@@ -6325,7 +6342,6 @@ const TOOL_UI_ZH_EN = [
   ["清空", "Clear"],
   ["生成", "Generate"],
   ["转换", "Convert"],
-  ["转", " to "],
   ["处理", "Process"],
   ["处理中", "Processing"],
   ["处理中...", "Processing..."],
@@ -6400,6 +6416,17 @@ function zhToEnText(text) {
   return out.replace(/\s{2,}/g, " ").trim();
 }
 
+function removeCjk(text) {
+  return String(text).replace(/[\u3400-\u9fff]/g, " ");
+}
+
+function toUiEnglish(text, fallback = "") {
+  const replaced = zhToEnText(text);
+  if (!/[\u3400-\u9fff]/.test(replaced)) return replaced;
+  const cleaned = removeCjk(replaced).replace(/\s{2,}/g, " ").trim();
+  return cleaned || fallback;
+}
+
 function localizeToolUiText(root) {
   if (!root || state.lang === "zh") return;
   const nodeFilter = window.NodeFilter ? window.NodeFilter.SHOW_TEXT : 4;
@@ -6413,25 +6440,61 @@ function localizeToolUiText(root) {
   textNodes.forEach((n) => {
     const raw = n.nodeValue;
     if (!raw || !/[\u4e00-\u9fa5]/.test(raw)) return;
-    n.nodeValue = zhToEnText(raw);
+    const p = n.parentElement?.tagName || "";
+    let fallback = "";
+    if (p === "BUTTON") fallback = "Run";
+    else if (p === "OPTION") fallback = "Option";
+    else if (p === "LABEL") fallback = "Field";
+    else if (p === "A") fallback = "Open";
+    n.nodeValue = toUiEnglish(raw, fallback);
   });
   root.querySelectorAll("input,textarea,select,option,button,label,a").forEach((el) => {
     if (el.placeholder && /[\u4e00-\u9fa5]/.test(el.placeholder)) {
-      el.placeholder = zhToEnText(el.placeholder);
+      el.placeholder = toUiEnglish(el.placeholder, "Input");
     }
     if (el.title && /[\u4e00-\u9fa5]/.test(el.title)) {
-      el.title = zhToEnText(el.title);
+      el.title = toUiEnglish(el.title, "Info");
     }
     if ((el.tagName === "INPUT" || el.tagName === "BUTTON") && el.value && /[\u4e00-\u9fa5]/.test(el.value)) {
-      el.value = zhToEnText(el.value);
-    }
-    if (el.textContent && /[\u4e00-\u9fa5]/.test(el.textContent)) {
-      el.textContent = zhToEnText(el.textContent);
-    }
-    if (el.value && el.tagName === "OPTION" && /[\u4e00-\u9fa5]/.test(el.value)) {
-      el.value = zhToEnText(el.value);
+      const fb = el.tagName === "BUTTON" ? "Run" : "Value";
+      el.value = toUiEnglish(el.value, fb);
     }
   });
+}
+
+function sweepToolUiEnglish(root) {
+  if (!root || state.lang === "zh") return;
+  root.querySelectorAll("*").forEach((el) => {
+    if (el.placeholder && /[\u3400-\u9fff]/.test(el.placeholder)) {
+      el.placeholder = toUiEnglish(el.placeholder, "Input");
+    }
+    if (el.title && /[\u3400-\u9fff]/.test(el.title)) {
+      el.title = toUiEnglish(el.title, "Info");
+    }
+    if (el.getAttribute && el.getAttribute("aria-label") && /[\u3400-\u9fff]/.test(el.getAttribute("aria-label"))) {
+      el.setAttribute("aria-label", toUiEnglish(el.getAttribute("aria-label"), "Control"));
+    }
+    if ((el.tagName === "INPUT" || el.tagName === "BUTTON") && el.value && /[\u3400-\u9fff]/.test(el.value)) {
+      el.value = toUiEnglish(el.value, el.tagName === "BUTTON" ? "Run" : "Value");
+    }
+    if (el.children.length === 0 && el.textContent && /[\u3400-\u9fff]/.test(el.textContent)) {
+      const fallback = el.tagName === "BUTTON" ? "Run" : el.tagName === "OPTION" ? "Option" : "";
+      el.textContent = toUiEnglish(el.textContent, fallback);
+    }
+  });
+}
+
+function scheduleToolUiLocalization(root) {
+  if (!root || state.lang === "zh") return;
+  const delays = [0, 120, 350, 800, 1500, 3000, 5000];
+  delays.forEach((d) =>
+    setTimeout(() => {
+      if (!root.isConnected || state.lang === "zh") return;
+      localizeToolUiText(root);
+      sweepToolUiEnglish(root);
+      enhanceFileInputsForLocale(root);
+    }, d),
+  );
 }
 
 function enhanceFileInputsForLocale(root) {
@@ -6483,22 +6546,35 @@ function observeToolUiLocalization(root) {
     toolUiObserver = null;
   }
   if (!root || state.lang === "zh" || typeof MutationObserver === "undefined") return;
+  let queued = false;
+  const runSweep = () => {
+    queued = false;
+    if (!root.isConnected || state.lang === "zh") return;
+    localizeToolUiText(root);
+    sweepToolUiEnglish(root);
+    enhanceFileInputsForLocale(root);
+  };
   toolUiObserver = new MutationObserver((mutations) => {
     for (const m of mutations) {
       if (m.type === "childList") {
         m.addedNodes.forEach((n) => {
           if (n && n.nodeType === 1) {
             localizeToolUiText(n);
+            sweepToolUiEnglish(n);
             enhanceFileInputsForLocale(n);
           }
           if (n && n.nodeType === 3 && /[\u4e00-\u9fa5]/.test(n.nodeValue || "")) {
-            n.nodeValue = zhToEnText(n.nodeValue || "");
+            n.nodeValue = toUiEnglish(n.nodeValue || "", "");
           }
         });
       } else if (m.type === "characterData") {
         const v = m.target?.nodeValue || "";
         if (/[\u4e00-\u9fa5]/.test(v)) m.target.nodeValue = zhToEnText(v);
       }
+    }
+    if (!queued) {
+      queued = true;
+      queueMicrotask(runSweep);
     }
   });
   toolUiObserver.observe(root, { childList: true, subtree: true, characterData: true });
@@ -6638,6 +6714,8 @@ function renderDetail(tool) {
   tool.builder(dom.detailToolUI);
   enhanceFileInputsForLocale(dom.detailToolUI);
   localizeToolUiText(dom.detailToolUI);
+  sweepToolUiEnglish(dom.detailToolUI);
+  scheduleToolUiLocalization(dom.detailToolUI);
   observeToolUiLocalization(dom.detailToolUI);
   renderToolDoc(tool);
 }
