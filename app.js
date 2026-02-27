@@ -6316,6 +6316,16 @@ function renderToolDoc(tool) {
 }
 
 const TOOL_UI_ZH_EN = [
+  ["顺时针 90°", "Rotate 90° CW"],
+  ["逆时针 90°", "Rotate 90° CCW"],
+  ["水平翻转", "Flip horizontal"],
+  ["垂直翻转", "Flip vertical"],
+  ["旋转/翻转", "Rotate / Flip"],
+  ["背景色阈值", "Background threshold"],
+  ["背景色", "Background color"],
+  ["去背景", "Remove background"],
+  ["如 1-3,5", "e.g. 1-3,5"],
+  ["请输入", "Please enter "],
   ["转换为图片", "Convert to image"],
   ["图片转 PDF", "Image to PDF"],
   ["压缩并导出 PDF", "Compress and export PDF"],
@@ -6416,15 +6426,10 @@ function zhToEnText(text) {
   return out.replace(/\s{2,}/g, " ").trim();
 }
 
-function removeCjk(text) {
-  return String(text).replace(/[\u3400-\u9fff]/g, " ");
-}
-
 function toUiEnglish(text, fallback = "") {
   const replaced = zhToEnText(text);
   if (!/[\u3400-\u9fff]/.test(replaced)) return replaced;
-  const cleaned = removeCjk(replaced).replace(/\s{2,}/g, " ").trim();
-  return cleaned || fallback;
+  return fallback || replaced;
 }
 
 function localizeToolUiText(root) {
@@ -6443,8 +6448,6 @@ function localizeToolUiText(root) {
     const p = n.parentElement?.tagName || "";
     let fallback = "";
     if (p === "BUTTON") fallback = "Run";
-    else if (p === "OPTION") fallback = "Option";
-    else if (p === "LABEL") fallback = "Field";
     else if (p === "A") fallback = "Open";
     n.nodeValue = toUiEnglish(raw, fallback);
   });
