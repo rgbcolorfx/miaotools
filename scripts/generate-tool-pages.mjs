@@ -5,6 +5,11 @@ const root = process.cwd();
 const appPath = path.join(root, "app.js");
 const outDir = path.join(root, "tool");
 const sitemapPath = path.join(root, "sitemap.xml");
+const sitemapPagesPath = path.join(root, "sitemap-pages.xml");
+const sitemapToolsPath = path.join(root, "sitemap-tools.xml");
+const urlsTxtPath = path.join(root, "urls.txt");
+const baiduUrlsPath = path.join(root, "baidu_urls.txt");
+const robotsPath = path.join(root, "robots.txt");
 const site = "https://miaotools.top";
 
 function escapeHtml(s) {
@@ -37,6 +42,8 @@ function buildToolPage(tool) {
     <title>${escapeHtml(tool.title)} | MiaoTools</title>
     <meta name="description" content="${escapeHtml(tool.description)}" />
     <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
+    <meta name="bingbot" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
+    <meta name="Baiduspider" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
     <link rel="canonical" href="${url}" />
     <meta property="og:title" content="${escapeHtml(tool.title)} | MiaoTools" />
     <meta property="og:description" content="${escapeHtml(tool.description)}" />
@@ -153,15 +160,69 @@ async function main() {
     await fs.writeFile(path.join(dir, "index.html"), buildToolPage(tool), "utf8");
   }
 
-  const sitemap = [
+  const lastmod = new Date().toISOString().slice(0, 10);
+  const toolUrls = tools.map((t) => `${site}/tool/${encodeURIComponent(t.id)}/`);
+  const pageUrls = [`${site}/`];
+
+  const sitemapPages = [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-    `  <url><loc>${site}/</loc></url>`,
-    ...tools.map((t) => `  <url><loc>${site}/tool/${encodeURIComponent(t.id)}/</loc></url>`),
+    ...pageUrls.map(
+      (u) => `  <url><loc>${u}</loc><lastmod>${lastmod}</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>`,
+    ),
     "</urlset>",
     "",
   ].join("\n");
-  await fs.writeFile(sitemapPath, sitemap, "utf8");
+  await fs.writeFile(sitemapPagesPath, sitemapPages, "utf8");
+
+  const sitemapTools = [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    ...toolUrls.map(
+      (u) => `  <url><loc>${u}</loc><lastmod>${lastmod}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>`,
+    ),
+    "</urlset>",
+    "",
+  ].join("\n");
+  await fs.writeFile(sitemapToolsPath, sitemapTools, "utf8");
+
+  const sitemapIndex = [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    `  <sitemap><loc>${site}/sitemap-pages.xml</loc><lastmod>${lastmod}</lastmod></sitemap>`,
+    `  <sitemap><loc>${site}/sitemap-tools.xml</loc><lastmod>${lastmod}</lastmod></sitemap>`,
+    "</sitemapindex>",
+    "",
+  ].join("\n");
+  await fs.writeFile(sitemapPath, sitemapIndex, "utf8");
+
+  const allUrls = [...pageUrls, ...toolUrls].join("\n") + "\n";
+  await fs.writeFile(urlsTxtPath, allUrls, "utf8");
+  await fs.writeFile(baiduUrlsPath, allUrls, "utf8");
+
+  const robots = [
+    "User-agent: *",
+    "Allow: /",
+    "",
+    "User-agent: Googlebot",
+    "Allow: /",
+    "",
+    "User-agent: Bingbot",
+    "Allow: /",
+    "",
+    "User-agent: Baiduspider",
+    "Allow: /",
+    "",
+    "User-agent: YandexBot",
+    "Allow: /",
+    "",
+    `Host: ${site.replace("https://", "")}`,
+    `Sitemap: ${site}/sitemap.xml`,
+    `Sitemap: ${site}/sitemap-pages.xml`,
+    `Sitemap: ${site}/sitemap-tools.xml`,
+    "",
+  ].join("\n");
+  await fs.writeFile(robotsPath, robots, "utf8");
 
   console.log(`generated ${tools.length} tool pages`);
 }
