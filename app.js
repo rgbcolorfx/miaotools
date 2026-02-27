@@ -6315,6 +6315,88 @@ function renderToolDoc(tool) {
   dom.detailSeoContent.append(sec);
 }
 
+const TOOL_UI_ZH_EN = [
+  ["请选择", "Please select"],
+  ["选择", "Select"],
+  ["输入", "Input"],
+  ["输出", "Output"],
+  ["下载", "Download"],
+  ["复制", "Copy"],
+  ["清空", "Clear"],
+  ["生成", "Generate"],
+  ["转换", "Convert"],
+  ["处理", "Process"],
+  ["导出", "Export"],
+  ["上传", "Upload"],
+  ["提取", "Extract"],
+  ["压缩", "Compress"],
+  ["合并", "Merge"],
+  ["拆分", "Split"],
+  ["裁剪", "Trim"],
+  ["校验", "Validate"],
+  ["格式化", "Format"],
+  ["解析", "Parse"],
+  ["读取", "Read"],
+  ["添加", "Add"],
+  ["移除", "Remove"],
+  ["执行", "Run"],
+  ["开始", "Start"],
+  ["结束", "End"],
+  ["文件", "file"],
+  ["图片", "image"],
+  ["视频", "video"],
+  ["音频", "audio"],
+  ["文本", "text"],
+  ["页码", "page range"],
+  ["页", "page"],
+  ["秒数", "seconds"],
+  ["秒", "s"],
+  ["格式", "format"],
+  ["参数", "params"],
+  ["密码", "password"],
+  ["失败", "failed"],
+  ["成功", "success"],
+  ["请先", "Please"],
+  ["请至少", "Please select at least"],
+  ["请", "Please "],
+];
+
+function zhToEnText(text) {
+  let out = String(text);
+  TOOL_UI_ZH_EN.forEach(([zh, en]) => {
+    out = out.split(zh).join(en);
+  });
+  return out.replace(/\s{2,}/g, " ").trim();
+}
+
+function localizeToolUiText(root) {
+  if (!root || state.lang === "zh") return;
+  const nodeFilter = window.NodeFilter ? window.NodeFilter.SHOW_TEXT : 4;
+  const walker = document.createTreeWalker(root, nodeFilter);
+  const textNodes = [];
+  let node = walker.nextNode();
+  while (node) {
+    textNodes.push(node);
+    node = walker.nextNode();
+  }
+  textNodes.forEach((n) => {
+    const raw = n.nodeValue;
+    if (!raw || !/[\u4e00-\u9fa5]/.test(raw)) return;
+    n.nodeValue = zhToEnText(raw);
+  });
+  root.querySelectorAll("input,textarea,select,option,button,label,a").forEach((el) => {
+    if (el.placeholder && /[\u4e00-\u9fa5]/.test(el.placeholder)) {
+      el.placeholder = zhToEnText(el.placeholder);
+    }
+    if (el.title && /[\u4e00-\u9fa5]/.test(el.title)) {
+      el.title = zhToEnText(el.title);
+    }
+    if (el.value && el.tagName === "OPTION" && /[\u4e00-\u9fa5]/.test(el.value)) {
+      el.value = zhToEnText(el.value);
+    }
+  });
+}
+
 function getCurrentToolId() {
   const p = new URLSearchParams(window.location.search);
   const fromQuery = p.get("tool") || "";
@@ -6447,6 +6529,7 @@ function renderDetail(tool) {
   dom.detailDesc.textContent = localizeToolDescription(tool);
   dom.detailToolUI.innerHTML = "";
   tool.builder(dom.detailToolUI);
+  localizeToolUiText(dom.detailToolUI);
   renderToolDoc(tool);
 }
 
