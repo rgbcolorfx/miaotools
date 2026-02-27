@@ -660,18 +660,19 @@ function buildUuidTool(container) {
 }
 
 function buildPasswordTool(container) {
+  const zh = state.lang === "zh";
   const row = document.createElement("div");
   row.className = "field-row";
   row.innerHTML = `
-    <label>长度
+    <label>${zh ? "长度" : "Length"}
       <input id="len" type="number" min="4" max="128" value="16" />
     </label>
-    <label>字符集
+    <label>${zh ? "字符集" : "Charset"}
       <select id="set">
-        <option value="all">字母+数字+符号</option>
-        <option value="alnum">字母+数字</option>
-        <option value="alpha">仅字母</option>
-        <option value="num">仅数字</option>
+        <option value="all">${zh ? "字母+数字+符号" : "Letters + Numbers + Symbols"}</option>
+        <option value="alnum">${zh ? "字母+数字" : "Letters + Numbers"}</option>
+        <option value="alpha">${zh ? "仅字母" : "Letters only"}</option>
+        <option value="num">${zh ? "仅数字" : "Numbers only"}</option>
       </select>
     </label>
   `;
@@ -679,7 +680,7 @@ function buildPasswordTool(container) {
 
   const runBtn = document.createElement("button");
   runBtn.className = "btn";
-  runBtn.textContent = "生成密码";
+  runBtn.textContent = zh ? "生成密码" : "Generate Password";
   container.append(runBtn);
   const result = createResultBox(container);
 
@@ -702,23 +703,24 @@ function buildPasswordTool(container) {
 }
 
 function buildRandomTool(container) {
+  const zh = state.lang === "zh";
   const row = document.createElement("div");
   row.className = "field-row";
   row.innerHTML = `
-    <label>最小值<input id="min" type="number" value="1" /></label>
-    <label>最大值<input id="max" type="number" value="100" /></label>
-    <label>数量<input id="count" type="number" value="10" min="1" max="500" /></label>
-    <label>类型
+    <label>${zh ? "最小值" : "Min"}<input id="min" type="number" value="1" /></label>
+    <label>${zh ? "最大值" : "Max"}<input id="max" type="number" value="100" /></label>
+    <label>${zh ? "数量" : "Count"}<input id="count" type="number" value="10" min="1" max="500" /></label>
+    <label>${zh ? "类型" : "Type"}
       <select id="kind">
-        <option value="int">整数</option>
-        <option value="float">小数(2位)</option>
+        <option value="int">${zh ? "整数" : "Integer"}</option>
+        <option value="float">${zh ? "小数(2位)" : "Float (2 decimals)"}</option>
       </select>
     </label>
   `;
   container.append(row);
   const runBtn = document.createElement("button");
   runBtn.className = "btn";
-  runBtn.textContent = "生成";
+  runBtn.textContent = zh ? "生成" : "Generate";
   container.append(runBtn);
   const result = createResultBox(container);
 
@@ -728,7 +730,7 @@ function buildRandomTool(container) {
     const count = Math.min(500, Math.max(1, Number(row.querySelector("#count").value) || 1));
     const kind = row.querySelector("#kind").value;
     if (max < min) {
-      result.textContent = "最大值必须 >= 最小值";
+      result.textContent = zh ? "最大值必须 >= 最小值" : "Max must be greater than or equal to Min";
       return;
     }
     const nums = Array.from({ length: count }, () => {
@@ -3754,21 +3756,22 @@ function buildHmacTool(container) {
 }
 
 function buildTextCleanTool(container) {
+  const zh = state.lang === "zh";
   const input = document.createElement("textarea");
-  input.placeholder = "输入文本";
+  input.placeholder = zh ? "输入文本" : "Input text";
   container.append(input);
   const row = document.createElement("div");
   row.className = "field-row";
   row.innerHTML = `
-    <label><input type="checkbox" id="trim" checked /> 去行首尾空格</label>
-    <label><input type="checkbox" id="blank" checked /> 去空行</label>
-    <label><input type="checkbox" id="spaces" checked /> 合并多空格</label>
-    <label><input type="checkbox" id="special" /> 去特殊字符(仅保留中英文数字空格)</label>
+    <label><input type="checkbox" id="trim" checked /> ${zh ? "去行首尾空格" : "Trim line spaces"}</label>
+    <label><input type="checkbox" id="blank" checked /> ${zh ? "去空行" : "Remove empty lines"}</label>
+    <label><input type="checkbox" id="spaces" checked /> ${zh ? "合并多空格" : "Collapse extra spaces"}</label>
+    <label><input type="checkbox" id="special" /> ${zh ? "去特殊字符(仅保留中英文数字空格)" : "Remove special chars (keep letters/numbers/spaces)"}</label>
   `;
   container.append(row);
   const runBtn = document.createElement("button");
   runBtn.className = "btn";
-  runBtn.textContent = "清洗文本";
+  runBtn.textContent = zh ? "清洗文本" : "Clean Text";
   container.append(runBtn);
   const result = createResultBox(container);
   runBtn.onclick = () => {
@@ -3782,24 +3785,25 @@ function buildTextCleanTool(container) {
 }
 
 function buildTextSplitMergeTool(container) {
+  const zh = state.lang === "zh";
   const input = document.createElement("textarea");
-  input.placeholder = "输入文本";
+  input.placeholder = zh ? "输入文本" : "Input text";
   container.append(input);
   const row = document.createElement("div");
   row.className = "field-row";
   row.innerHTML = `
-    <label>分隔符<input id="delim" value="," class="mono" /></label>
-    <label>目标
+    <label>${zh ? "分隔符" : "Delimiter"}<input id="delim" value="," class="mono" /></label>
+    <label>${zh ? "目标" : "Mode"}
       <select id="mode">
-        <option value="split">按分隔符拆分为换行</option>
-        <option value="merge">按换行合并为分隔符</option>
+        <option value="split">${zh ? "按分隔符拆分为换行" : "Split by delimiter to lines"}</option>
+        <option value="merge">${zh ? "按换行合并为分隔符" : "Merge lines with delimiter"}</option>
       </select>
     </label>
   `;
   container.append(row);
   const runBtn = document.createElement("button");
   runBtn.className = "btn";
-  runBtn.textContent = "处理";
+  runBtn.textContent = zh ? "处理" : "Process";
   container.append(runBtn);
   const result = createResultBox(container);
   runBtn.onclick = () => {
@@ -3811,21 +3815,22 @@ function buildTextSplitMergeTool(container) {
 }
 
 function buildBatchReplaceTool(container) {
+  const zh = state.lang === "zh";
   const input = document.createElement("textarea");
-  input.placeholder = "输入原文本";
+  input.placeholder = zh ? "输入原文本" : "Input text";
   container.append(input);
   const row = document.createElement("div");
   row.className = "field-row";
   row.innerHTML = `
-    <label>查找<input id="find" /></label>
-    <label>替换为<input id="rep" /></label>
-    <label><input type="checkbox" id="regex" /> 使用正则</label>
-    <label><input type="checkbox" id="global" checked /> 全部替换</label>
+    <label>${zh ? "查找" : "Find"}<input id="find" /></label>
+    <label>${zh ? "替换为" : "Replace with"}<input id="rep" /></label>
+    <label><input type="checkbox" id="regex" /> ${zh ? "使用正则" : "Use regex"}</label>
+    <label><input type="checkbox" id="global" checked /> ${zh ? "全部替换" : "Replace all"}</label>
   `;
   container.append(row);
   const runBtn = document.createElement("button");
   runBtn.className = "btn";
-  runBtn.textContent = "替换";
+  runBtn.textContent = zh ? "替换" : "Replace";
   container.append(runBtn);
   const result = createResultBox(container);
   runBtn.onclick = () => {
@@ -3845,7 +3850,7 @@ function buildBatchReplaceTool(container) {
         result.textContent = input.value.replace(f, r);
       }
     } catch (err) {
-      result.textContent = `替换失败: ${err.message}`;
+      result.textContent = zh ? `替换失败: ${err.message}` : `Replace failed: ${err.message}`;
     }
   };
 }
