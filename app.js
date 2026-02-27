@@ -6462,41 +6462,6 @@ function localizeToolUiText(root) {
   });
 }
 
-function sweepToolUiEnglish(root) {
-  if (!root || state.lang === "zh") return;
-  root.querySelectorAll("*").forEach((el) => {
-    if (el.placeholder && /[\u3400-\u9fff]/.test(el.placeholder)) {
-      el.placeholder = toUiEnglish(el.placeholder, "Input");
-    }
-    if (el.title && /[\u3400-\u9fff]/.test(el.title)) {
-      el.title = toUiEnglish(el.title, "Info");
-    }
-    if (el.getAttribute && el.getAttribute("aria-label") && /[\u3400-\u9fff]/.test(el.getAttribute("aria-label"))) {
-      el.setAttribute("aria-label", toUiEnglish(el.getAttribute("aria-label"), "Control"));
-    }
-    if ((el.tagName === "INPUT" || el.tagName === "BUTTON") && el.value && /[\u3400-\u9fff]/.test(el.value)) {
-      el.value = toUiEnglish(el.value, el.tagName === "BUTTON" ? "Run" : "Value");
-    }
-    if (el.children.length === 0 && el.textContent && /[\u3400-\u9fff]/.test(el.textContent)) {
-      const fallback = el.tagName === "BUTTON" ? "Run" : el.tagName === "OPTION" ? "Option" : "";
-      el.textContent = toUiEnglish(el.textContent, fallback);
-    }
-  });
-}
-
-function scheduleToolUiLocalization(root) {
-  if (!root || state.lang === "zh") return;
-  const delays = [0, 120, 350, 800, 1500, 3000, 5000];
-  delays.forEach((d) =>
-    setTimeout(() => {
-      if (!root.isConnected || state.lang === "zh") return;
-      localizeToolUiText(root);
-      sweepToolUiEnglish(root);
-      enhanceFileInputsForLocale(root);
-    }, d),
-  );
-}
-
 function enhanceFileInputsForLocale(root) {
   if (!root) return;
   const isZh = state.lang === "zh";
@@ -6546,21 +6511,12 @@ function observeToolUiLocalization(root) {
     toolUiObserver = null;
   }
   if (!root || state.lang === "zh" || typeof MutationObserver === "undefined") return;
-  let queued = false;
-  const runSweep = () => {
-    queued = false;
-    if (!root.isConnected || state.lang === "zh") return;
-    localizeToolUiText(root);
-    sweepToolUiEnglish(root);
-    enhanceFileInputsForLocale(root);
-  };
   toolUiObserver = new MutationObserver((mutations) => {
     for (const m of mutations) {
       if (m.type === "childList") {
         m.addedNodes.forEach((n) => {
           if (n && n.nodeType === 1) {
             localizeToolUiText(n);
-            sweepToolUiEnglish(n);
             enhanceFileInputsForLocale(n);
           }
           if (n && n.nodeType === 3 && /[\u4e00-\u9fa5]/.test(n.nodeValue || "")) {
@@ -6571,10 +6527,6 @@ function observeToolUiLocalization(root) {
         const v = m.target?.nodeValue || "";
         if (/[\u4e00-\u9fa5]/.test(v)) m.target.nodeValue = zhToEnText(v);
       }
-    }
-    if (!queued) {
-      queued = true;
-      queueMicrotask(runSweep);
     }
   });
   toolUiObserver.observe(root, { childList: true, subtree: true, characterData: true });
@@ -6714,8 +6666,6 @@ function renderDetail(tool) {
   tool.builder(dom.detailToolUI);
   enhanceFileInputsForLocale(dom.detailToolUI);
   localizeToolUiText(dom.detailToolUI);
-  sweepToolUiEnglish(dom.detailToolUI);
-  scheduleToolUiLocalization(dom.detailToolUI);
   observeToolUiLocalization(dom.detailToolUI);
   renderToolDoc(tool);
 }
