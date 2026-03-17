@@ -1,3 +1,5 @@
+import { injectSpeedInsights } from '@vercel/speed-insights';
+
 const dom = {
   overviewPage: document.getElementById("overviewPage"),
   detailPage: document.getElementById("detailPage"),
@@ -6760,3 +6762,6 @@ window.addEventListener("popstate", () => render());
 applyLocale();
 initVisitCounter();
 render();
+
+// Initialize Vercel Speed Insights
+injectSpeedInsights();
