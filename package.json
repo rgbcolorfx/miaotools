@@ -4,5 +4,8 @@
   "version": "1.0.0",
   "scripts": {
     "vercel-build": "bash scripts/vercel-build.sh"
+  },
+  "dependencies": {
+    "@vercel/speed-insights": "^2.0.0"
   }
 }
