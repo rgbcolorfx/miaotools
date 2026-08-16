@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>二维码识别 | MiaoTools</title>
+    <meta name="description" content="从图片中识别二维码内容" />
+    <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
+    <meta name="bingbot" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
+    <meta name="Baiduspider" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
+    <link rel="canonical" href="https://miaotools.top/tool/qr-decode/" />
+    <meta property="og:title" content="二维码识别 | MiaoTools" />
+    <meta property="og:description" content="从图片中识别二维码内容" />
+    <meta property="og:url" content="https://miaotools.top/tool/qr-decode/" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="二维码识别 | MiaoTools" />
+    <meta name="twitter:description" content="从图片中识别二维码内容" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "二维码识别",
+        "applicationCategory": "图像工具",
+        "operatingSystem": "Any",
+        "description": "从图片中识别二维码内容",
+        "url": "https://miaotools.top/tool/qr-decode/",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+      }
+    </script>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <div class="hero__inner">
+        <div class="hero__top">
+          <p id="brandTitle" class="hero__eyebrow">MiaoTools / 秒用工具箱</p>
+          <div class="hero__controls">
+            <label for="langSelect" id="langLabel" class="hero__label">Language</label>
+            <select id="langSelect" class="hero__select">
+              <option value="en">English</option>
+              <option value="zh">中文</option>
+              <option value="ja">日本語</option>
+              <option value="ko">한국어</option>
+              <option value="ru">Русский</option>
+            </select>
+          </div>
+        </div>
+        <div class="hero__search">
+          <input id="searchInput" type="search" placeholder="搜索工具，例如：复利、JSON、时间戳" />
+          <button id="clearSearch" class="btn btn--ghost">清空</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="shell">
+      <section id="overviewPage" class="page page--overview hidden">
+        <div class="toolbar">
+          <div id="categoryChips" class="chips"></div>
+          <div id="resultCount" class="result-count"></div>
+        </div>
+        <div id="directory" class="directory"></div>
+      </section>
+
+      <section id="detailPage" class="page page--detail">
+        <div class="detail-head">
+          <button id="backToList" class="btn btn--ghost">返回工具目录</button>
+          <p id="detailCategory" class="detail-category">图像工具</p>
+          <h2 id="detailTitle">二维码识别</h2>
+          <p id="detailDesc" class="detail-desc">从图片中识别二维码内容</p>
+        </div>
+        <article class="tool-panel">
+          <div id="detailToolUI"></div>
+        </article>
+        <section id="detailSeoContent" class="tool-docs">
+          <h3>工具作用</h3>
+          <p>二维码识别用于快速完成从图片中识别二维码内容，适合图像工具场景，纯前端可直接使用。</p>
+          <h3>使用步骤</h3>
+          <ol><li>输入或上传原始数据</li><li>设置参数并执行处理</li><li>查看结果并下载或复制</li></ol>
+          <h3>示例</h3>
+          <p>示例输入：输入文本或上传示例文件</p>
+          <p>示例输出：生成处理后的目标结果</p>
+          <h3>注意事项</h3>
+          <ul><li>建议先用小数据测试参数</li><li>处理大文件时保持页面开启</li><li>涉及隐私数据请在可信设备操作</li></ul>
+        </section>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p id="visitCount" class="footer__visit">Total visits: --</p>
+      <div class="footer__seo">
+        <p id="seoLinksLabel" class="footer__seo-label">Tool links for indexing</p>
+        <nav id="seoToolLinks" class="seo-links" aria-label="Tool links"></nav>
+      </div>
+    </footer>
+
+    <template id="toolCardTemplate">
+      <article class="tool-card">
+        <h3 data-tool-title class="tool-card__title"></h3>
+        <p data-tool-desc></p>
+      </article>
+    </template>
+
+    <script id="ldTool" type="application/ld+json">{}</script>
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
